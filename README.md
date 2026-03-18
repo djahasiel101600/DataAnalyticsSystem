@@ -2,6 +2,8 @@
 
 A web app to upload spreadsheets (CSV/Excel), run analytics operations (duplicate check, lookups across sheets, filter/sort, regex search, merge/join, aggregation), and export results. No login required.
 
+**New:** Full user documentation is in `docs/USER_GUIDE.md`.
+
 ## Tech stack
 
 - **Backend:** Django 5, Django REST Framework, django-cors-headers, pandas, openpyxl
@@ -53,6 +55,39 @@ The app runs at **http://localhost:5175**. The dev server proxies `/api` to Djan
    - **Aggregate** – Group by columns and compute sum, count, average, min, or max.
    - **Ask AI** – Ask natural-language questions about your data (summarize, suggest filters or merge keys). Requires `OPENAI_API_KEY` on the backend.
 4. **Export** – After running an operation, use "Export as CSV" or "Export as Excel" to download the result.
+
+## Merge/Join: Different join types (and why)
+
+When you **Merge** two datasets, you pick:
+
+- **Left dataset**: the “main list” you want to keep (e.g. HR master employees).
+- **Right dataset**: the “lookup/enrichment” dataset you want to attach (e.g. Slack activity).
+- **Key column(s)**: the columns that must match on both sides (e.g. `email`).
+- **Join type**: controls which rows are kept in the output.
+
+### Join types
+
+- **Inner join**
+  - **Keeps**: only rows where the key exists in **both** left and right.
+  - **Why/when**: use when you only care about records that match across sources (e.g. “employees that have both HR record and Slack record”).
+
+- **Left join**
+  - **Keeps**: **all** rows from the **left** dataset; attaches matching columns from the right (missing matches become blank).
+  - **Why/when**: use when the left dataset is your source of truth (common in HR/payroll). Example: keep all employees from HR master even if Slack export is missing a user.
+
+- **Right join**
+  - **Keeps**: **all** rows from the **right** dataset; attaches matching columns from the left.
+  - **Why/when**: use when the right dataset is the source of truth (e.g. “all Slack users, enriched with HR info when present”).
+
+- **Full (outer) join**
+  - **Keeps**: **all** rows from **both** datasets; matches where possible; non-matching rows from either side still appear with blanks for missing columns.
+  - **Why/when**: use for reconciliation and audits (e.g. “show me HR employees missing in Slack and Slack users missing in HR”).
+
+### Quick examples (HR + Slack)
+
+- **Payroll exclusion workflow**: start with **Left join** (HR master on the left) so nobody disappears accidentally.
+- **Cross-system consistency check**: use **Full join** to find mismatches between systems.
+- **Only employees with Slack activity**: use **Inner join**.
 
 ## Production build (optional)
 
