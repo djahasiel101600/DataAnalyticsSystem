@@ -1,0 +1,21 @@
+employee_id,name,email,role,department,manager_email,hire_date,location
+E001,James Wilson,james.wilson@logistics.com,Driver,Fleet,jane.doe@logistics.com,2022-03-15,Chicago
+E002,Maria Garcia,maria.garcia@logistics.com,Driver,Fleet,jane.doe@logistics.com,2021-06-01,Dallas
+E003,Robert Chen,robert.chen@logistics.com,Driver,Fleet,jane.doe@logistics.com,2023-01-10,Chicago
+E004,Sarah Miller,sarah.miller@logistics.com,Dispatcher,Operations,jane.doe@logistics.com,2020-09-14,Atlanta
+E005,David Kim,david.kim@logistics.com,Driver,Fleet,jane.doe@logistics.com,2022-11-01,Houston
+E006,Emily Davis,emily.davis@logistics.com,Warehouse Associate,Warehouse,mike.smith@logistics.com,2023-05-20,Chicago
+E007,Michael Brown,michael.brown@logistics.com,Driver,Fleet,jane.doe@logistics.com,2019-04-01,Dallas
+E008,Jennifer Lee,jennifer.lee@logistics.com,HR Coordinator,HR,jane.doe@logistics.com,2021-02-15,Atlanta
+E009,Christopher Taylor,christopher.taylor@logistics.com,Driver,Fleet,jane.doe@logistics.com,2023-08-01,Houston
+E010,Amanda Martinez,amanda.martinez@logistics.com,Dispatcher,Operations,jane.doe@logistics.com,2022-07-11,Dallas
+E011,Daniel White,daniel.white@logistics.com,Driver,Fleet,jane.doe@logistics.com,2020-12-01,Chicago
+E012,Lisa Anderson,lisa.anderson@logistics.com,Warehouse Associate,Warehouse,mike.smith@logistics.com,2024-01-08,Atlanta
+E013,Matthew Thomas,matthew.thomas@logistics.com,Driver,Fleet,jane.doe@logistics.com,2023-03-20,Houston
+E014,Jessica Jackson,jessica.jackson@logistics.com,Payroll Specialist,HR,jane.doe@logistics.com,2021-08-01,Atlanta
+E015,Andrew Harris,andrew.harris@logistics.com,Driver,Fleet,jane.doe@logistics.com,2022-05-10,Chicago
+E016,Nicole Clark,nicole.clark@logistics.com,Driver,Fleet,jane.doe@logistics.com,2023-11-01,Dallas
+E017,William Lewis,william.lewis@logistics.com,Dispatcher,Operations,jane.doe@logistics.com,2020-03-01,Houston
+E018,Rachel Robinson,rachel.robinson@logistics.com,Warehouse Associate,Warehouse,mike.smith@logistics.com,2022-09-15,Chicago
+E019,Kevin Walker,kevin.walker@logistics.com,Driver,Fleet,jane.doe@logistics.com,2021-11-01,Dallas
+E020,Olivia Hall,olivia.hall@logistics.com,Driver,Fleet,jane.doe@logistics.com,2023-07-01,Atlanta
