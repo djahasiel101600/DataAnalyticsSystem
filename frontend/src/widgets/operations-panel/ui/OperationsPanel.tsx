@@ -6,6 +6,7 @@ import { FilterSortForm } from '@/features/filter-sort'
 import { RegexSearchForm } from '@/features/regex-search'
 import { MergeJoinForm } from '@/features/merge-join'
 import { AggregateForm } from '@/features/aggregate'
+import { AskAIForm } from '@/features/ai-analytics'
 
 export function OperationsPanel() {
   return (
@@ -19,6 +20,7 @@ export function OperationsPanel() {
           <TabsTrigger value="regex" className="flex-shrink-0 px-3 py-2 text-sm">Regex</TabsTrigger>
           <TabsTrigger value="merge" className="flex-shrink-0 px-3 py-2 text-sm">Merge</TabsTrigger>
           <TabsTrigger value="aggregate" className="flex-shrink-0 px-3 py-2 text-sm">Aggregate</TabsTrigger>
+          <TabsTrigger value="ai" className="flex-shrink-0 px-3 py-2 text-sm">Ask AI</TabsTrigger>
         </TabsList>
       </Fragment>
       <TabsContent value="duplicate" className="mt-0 focus-visible:outline-none">
@@ -38,6 +40,9 @@ export function OperationsPanel() {
       </TabsContent>
       <TabsContent value="aggregate" className="mt-0 focus-visible:outline-none">
         <AggregateForm />
+      </TabsContent>
+      <TabsContent value="ai" className="mt-0 focus-visible:outline-none">
+        <AskAIForm />
       </TabsContent>
     </Tabs>
   )

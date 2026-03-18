@@ -26,7 +26,9 @@ pip install -r requirements.txt
 python manage.py runserver 8090
 ```
 
-The API runs at **http://localhost:8090**. Optional endpoints: `GET /api/health/`, `POST /api/export/xlsx/`.
+The API runs at **http://localhost:8090**. Endpoints: `GET /api/health/`, `POST /api/export/xlsx/`, `POST /api/parse/upload/`, `POST /api/ai/analytics/`.
+
+**Optional – Ask AI:** To enable the "Ask AI" tab, set the `OPENAI_API_KEY` environment variable before starting the backend (e.g. `set OPENAI_API_KEY=sk-...` on Windows, or `export OPENAI_API_KEY=sk-...` on macOS/Linux). The AI uses your current data (column names and first 5 rows) to answer questions and suggest operations.
 
 ## Frontend (React)
 
@@ -49,6 +51,7 @@ The app runs at **http://localhost:5175**. The dev server proxies `/api` to Djan
    - **Regex** – Search across one or more datasets with a regular expression.
    - **Merge** – Join two datasets (inner, left, right, full) on key columns.
    - **Aggregate** – Group by columns and compute sum, count, average, min, or max.
+   - **Ask AI** – Ask natural-language questions about your data (summarize, suggest filters or merge keys). Requires `OPENAI_API_KEY` on the backend.
 4. **Export** – After running an operation, use "Export as CSV" or "Export as Excel" to download the result.
 
 ## Production build (optional)

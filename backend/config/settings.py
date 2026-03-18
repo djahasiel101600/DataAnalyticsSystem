@@ -6,7 +6,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env from backend directory so OPENAI_API_KEY etc. are set
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    from dotenv import load_dotenv
+    load_dotenv(_env_file)
+
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Optional: set OPENAI_API_KEY in .env or environment for AI analytics feature
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 

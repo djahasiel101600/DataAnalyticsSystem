@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/health/', views.health),
     path('api/export/xlsx/', views.export_xlsx),
     path('api/parse/upload/', views.parse_upload),
+    path('api/ai/analytics/', views.ai_analytics),
 ]
 
 # Serve SPA (when built): for any non-API route, serve index.html
