@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm off-white background, slate text */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 18%;
+    /* Teal primary – clear and professional */
+    --primary: 173 58% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 215 25% 18%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 47%;
+    /* Accent = light teal for hovers and selection */
+    --accent: 166 45% 92%;
+    --accent-foreground: 173 58% 25%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 173 58% 39%;
+    --radius: 0.5rem;
+    /* Regex / search highlight */
+    --highlight: 45 93% 88%;
+    --highlight-foreground: 25 30% 20%;
+    /* Success / positive */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+  }
+  .dark {
+    --background: 215 25% 12%;
+    --foreground: 210 20% 95%;
+    --card: 215 22% 15%;
+    --card-foreground: 210 20% 95%;
+    --primary: 173 58% 45%;
+    --primary-foreground: 215 25% 12%;
+    --secondary: 215 22% 20%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 215 22% 20%;
+    --muted-foreground: 215 15% 60%;
+    --accent: 173 35% 22%;
+    --accent-foreground: 173 58% 70%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 22% 22%;
+    --input: 215 22% 22%;
+    --ring: 173 58% 45%;
+    --highlight: 45 40% 30%;
+    --highlight-foreground: 45 20% 90%;
+    --success: 142 55% 45%;
+    --success-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Sidebar: compact card padding */
+[data-sidebar] .rounded-lg.border > div {
+  padding: 0.5rem 0.75rem !important;
+}
+[data-sidebar] .rounded-lg.border > div:first-child {
+  padding-top: 0.75rem !important;
+}
+[data-sidebar] .rounded-lg.border > div.pt-0 {
+  padding-top: 0 !important;
+}
+

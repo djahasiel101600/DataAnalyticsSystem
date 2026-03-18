@@ -1,0 +1,70 @@
+# Data Analytics System
+
+A web app to upload spreadsheets (CSV/Excel), run analytics operations (duplicate check, lookups across sheets, filter/sort, regex search, merge/join, aggregation), and export results. No login required.
+
+## Tech stack
+
+- **Backend:** Django 5, Django REST Framework, django-cors-headers, pandas, openpyxl
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI, Feature Sliced Design
+- **Parsing:** Papa Parse (CSV), SheetJS (XLSX) in the browser
+
+## Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+
+## Backend (Django)
+
+```bash
+cd backend
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+# source venv/bin/activate
+pip install -r requirements.txt
+python manage.py runserver 8090
+```
+
+The API runs at **http://localhost:8090**. Optional endpoints: `GET /api/health/`, `POST /api/export/xlsx/`.
+
+## Frontend (React)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The app runs at **http://localhost:5175**. The dev server proxies `/api` to Django on port 8090.
+
+## Using the app
+
+1. **Upload** – Drag and drop or select one or more CSV or Excel files. Each file becomes a named dataset in the sidebar.
+2. **Inspect** – Click a dataset in the sidebar to view its rows and columns in the main area.
+3. **Operations** – Use the sidebar tabs:
+   - **Duplicate** – Select a dataset and key columns; run to mark duplicate rows.
+   - **Lookup** – Pick source and lookup datasets, key columns, and columns to retrieve (VLOOKUP-style).
+   - **Filter** – Filter and/or sort the current result or a dataset.
+   - **Regex** – Search across one or more datasets with a regular expression.
+   - **Merge** – Join two datasets (inner, left, right, full) on key columns.
+   - **Aggregate** – Group by columns and compute sum, count, average, min, or max.
+4. **Export** – After running an operation, use "Export as CSV" or "Export as Excel" to download the result.
+
+## Production build (optional)
+
+Build the frontend and serve it from Django:
+
+```bash
+cd frontend
+npm run build
+cd ../backend
+python manage.py runserver
+```
+
+Then open **http://localhost:8090**. The Django app serves the SPA for non-API routes when `frontend/dist` exists.
+
+## Project structure
+
+- `backend/` – Django project (`config/`) and API app (`api/`)
+- `frontend/src/` – FSD layers: `app/`, `pages/`, `widgets/`, `features/`, `entities/`, `shared/`

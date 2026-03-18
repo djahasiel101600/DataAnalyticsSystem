@@ -1,0 +1,9 @@
+id,name,department,manager_id
+E001,Alice Chen,Engineering,
+E002,Bob Smith,Sales,E005
+E003,Carol Jones,Engineering,E001
+E004,David Lee,Marketing,E005
+E005,Jane Doe,Executive,
+E006,Eve Brown,Engineering,E001
+E007,Frank Wilson,Sales,E005
+E008,Grace Kim,Marketing,E005

@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/.venv/
+backend/venv/
+venv/
+.venv/
+env/
+.env/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+*.egg-info/
+*.egg
+backend/staticfiles/
+backend/static/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Django
+backend/*.sqlite3
+backend/*.log
+backend/media/
+backend/db.sqlite3
+*.sqlite3
+local_settings.py
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+tmp/
+temp/
+*.tmp
+
+# Optional: keep frontend dist if you deploy from repo (uncomment to ignore)
+# frontend/dist/
