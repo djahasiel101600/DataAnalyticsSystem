@@ -1,8 +1,16 @@
 import { useState } from 'react'
 import { useDatasets } from '@/app/store/DatasetsContext'
-import { runDuplicateCheck, type DuplicateCheckMode, type DuplicateCheckKeep, type DuplicateCheckOptions } from '../lib/run-duplicate-check'
+import {
+  runDuplicateCheck,
+  type DuplicateCheckMode,
+  type DuplicateCheckKeep,
+  type DuplicateCheckOptions,
+  type DuplicateKeepStrategy,
+  type DuplicateCompareAs,
+} from '../lib/run-duplicate-check'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
+import { Input } from '@/shared/ui/input'
 import {
   Select,
   SelectContent,
@@ -17,7 +25,11 @@ export function DuplicateCheckForm() {
   const [datasetId, setDatasetId] = useState<string>('')
   const [keyColumns, setKeyColumns] = useState<string[]>([])
   const [mode, setMode] = useState<DuplicateCheckMode>('mark')
-  const [keep, setKeep] = useState<DuplicateCheckKeep>('first')
+  const [keepStrategy, setKeepStrategy] = useState<DuplicateKeepStrategy>('first')
+  const [keepByColumn, setKeepByColumn] = useState<string>('')
+  const [compareAs, setCompareAs] = useState<DuplicateCompareAs>('auto')
+  const [priorityValues, setPriorityValues] = useState<string>('') // comma-separated
+  const [addKeepPreviewColumns, setAddKeepPreviewColumns] = useState(true)
   const [ignoreCase, setIgnoreCase] = useState(false)
   const [trim, setTrim] = useState(false)
   const [running, setRunning] = useState(false)
@@ -35,8 +47,21 @@ export function DuplicateCheckForm() {
     if (!dataset || keyColumns.length === 0) return
     setRunning(true)
     try {
-      const opts: DuplicateCheckOptions = { ignoreCase, trim }
-      const { columns: outCols, rows } = runDuplicateCheck(dataset, keyColumns, mode, keep, opts)
+      const opts: DuplicateCheckOptions = {
+        ignoreCase,
+        trim,
+        keepStrategy: mode === 'remove' ? keepStrategy : keepStrategy,
+        keepByColumn,
+        compareAs,
+        priorityValues: priorityValues
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        addKeepPreviewColumns,
+      }
+      const effectiveKeep: DuplicateCheckKeep =
+        keepStrategy === 'last' ? 'last' : 'first'
+      const { columns: outCols, rows } = runDuplicateCheck(dataset, keyColumns, mode, effectiveKeep, opts)
       setResult({ columns: outCols, rows })
     } finally {
       setRunning(false)
@@ -80,20 +105,88 @@ export function DuplicateCheckForm() {
                 </SelectContent>
               </Select>
             </div>
-            {mode === 'remove' && (
-              <div>
-                <Label>When removing duplicates, keep</Label>
-                <Select value={keep} onValueChange={(v) => setKeep(v as DuplicateCheckKeep)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="first">First occurrence</SelectItem>
-                    <SelectItem value="last">Last occurrence</SelectItem>
-                  </SelectContent>
-                </Select>
+
+            <div>
+              <Label>Preserve row by</Label>
+              <Select value={keepStrategy} onValueChange={(v) => setKeepStrategy(v as DuplicateKeepStrategy)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="first">First occurrence</SelectItem>
+                  <SelectItem value="last">Last occurrence</SelectItem>
+                  <SelectItem value="most_complete">Most complete (fewest blanks)</SelectItem>
+                  <SelectItem value="max">Max of a column</SelectItem>
+                  <SelectItem value="min">Min of a column</SelectItem>
+                  <SelectItem value="priority">Priority list (preferred values)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                This controls which row is kept within each duplicate group.
+              </p>
+            </div>
+
+            {(keepStrategy === 'max' || keepStrategy === 'min' || keepStrategy === 'priority') && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <Label>Keep by column</Label>
+                  <Select value={keepByColumn} onValueChange={setKeepByColumn}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {columns.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(keepStrategy === 'max' || keepStrategy === 'min') && (
+                  <div>
+                    <Label>Compare as</Label>
+                    <Select value={compareAs} onValueChange={(v) => setCompareAs(v as DuplicateCompareAs)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="number">Number</SelectItem>
+                        <SelectItem value="text">Text</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
+
+            {keepStrategy === 'priority' && (
+              <div>
+                <Label>Priority values (comma-separated, left = best)</Label>
+                <Input
+                  value={priorityValues}
+                  onChange={(e) => setPriorityValues(e.target.value)}
+                  placeholder="e.g. Active, Inactive, Offboarded"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  If a value isn’t in the list, it is treated as lowest priority.
+                </p>
+              </div>
+            )}
+
+            {mode === 'mark' && (
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={addKeepPreviewColumns}
+                    onChange={(e) => setAddKeepPreviewColumns(e.target.checked)}
+                  />
+                  Add keep preview columns (_dup_group, _dup_rank, _dup_keep)
+                </label>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={ignoreCase} onChange={(e) => setIgnoreCase(e.target.checked)} />
@@ -122,7 +215,11 @@ export function DuplicateCheckForm() {
             </div>
             <Button
               onClick={handleRun}
-              disabled={keyColumns.length === 0 || running}
+              disabled={
+                keyColumns.length === 0 ||
+                running ||
+                ((keepStrategy === 'max' || keepStrategy === 'min' || keepStrategy === 'priority') && !keepByColumn)
+              }
             >
               {running ? 'Running...' : 'Run duplicate check'}
             </Button>

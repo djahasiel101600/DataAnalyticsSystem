@@ -7,6 +7,7 @@ import { RegexSearchForm } from '@/features/regex-search'
 import { MergeJoinForm } from '@/features/merge-join'
 import { AggregateForm } from '@/features/aggregate'
 import { AskAIForm } from '@/features/ai-analytics'
+import { CoverageCheckForm } from '@/features/coverage-check'
 
 export function OperationsPanel() {
   return (
@@ -19,6 +20,7 @@ export function OperationsPanel() {
           <TabsTrigger value="filter" className="flex-shrink-0 px-3 py-2 text-sm">Filter & sort</TabsTrigger>
           <TabsTrigger value="regex" className="flex-shrink-0 px-3 py-2 text-sm">Regex</TabsTrigger>
           <TabsTrigger value="merge" className="flex-shrink-0 px-3 py-2 text-sm">Merge</TabsTrigger>
+          <TabsTrigger value="coverage" className="flex-shrink-0 px-3 py-2 text-sm">Coverage</TabsTrigger>
           <TabsTrigger value="aggregate" className="flex-shrink-0 px-3 py-2 text-sm">Aggregate</TabsTrigger>
           <TabsTrigger value="ai" className="flex-shrink-0 px-3 py-2 text-sm">Ask AI</TabsTrigger>
         </TabsList>
@@ -37,6 +39,9 @@ export function OperationsPanel() {
       </TabsContent>
       <TabsContent value="merge" className="mt-0 focus-visible:outline-none">
         <MergeJoinForm />
+      </TabsContent>
+      <TabsContent value="coverage" className="mt-0 focus-visible:outline-none">
+        <CoverageCheckForm />
       </TabsContent>
       <TabsContent value="aggregate" className="mt-0 focus-visible:outline-none">
         <AggregateForm />
