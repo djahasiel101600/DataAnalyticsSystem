@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useDatasets } from '@/app/store/DatasetsContext'
 import { parseFile, parseFileServer, shouldUseServerParse, ACCEPT_UPLOAD } from '@/shared/lib/parse-file'
+import { pickFromGoogleDrive, downloadDriveFileAsBlob } from '@/shared/lib/google-drive'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { cn } from '@/shared/lib'
@@ -65,6 +66,26 @@ export function UploadZone() {
     [processFiles]
   )
 
+  const onImportDrive = useCallback(async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const picked = await pickFromGoogleDrive()
+      const { blob, filename } = await downloadDriveFileAsBlob({
+        fileId: picked.fileId,
+        accessToken: picked.accessToken,
+        mimeType: picked.mimeType,
+        name: picked.name,
+      })
+      const file = new File([blob], filename, { type: picked.mimeType || blob.type })
+      await processFiles([file])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Google Drive import failed')
+    } finally {
+      setLoading(false)
+    }
+  }, [processFiles])
+
   return (
     <Card className="border-dashed">
       <CardContent className="p-3">
@@ -91,14 +112,24 @@ export function UploadZone() {
           ) : (
             <>
               <p className="text-muted-foreground text-xs mb-2">CSV or Excel</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => inputRef.current?.click()}
-              >
-                Browse
-              </Button>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => inputRef.current?.click()}
+                >
+                  Browse
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={onImportDrive}
+                >
+                  Import from Drive
+                </Button>
+              </div>
             </>
           )}
         </div>

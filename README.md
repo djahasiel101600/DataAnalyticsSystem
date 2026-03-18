@@ -42,6 +42,30 @@ npm run dev
 
 The app runs at **http://localhost:5175**. The dev server proxies `/api` to Django on port 8090.
 
+## Google Drive import (optional)
+
+The Upload panel supports **Import from Drive** (OAuth + Google Picker) to load shared files you have access to.
+
+### Setup
+
+1. Create a Google Cloud project and enable:
+   - **Google Drive API**
+2. Configure OAuth:
+   - Create an **OAuth Client ID** (Web application)
+   - Add your app origin (for dev): `http://localhost:5175`
+3. Create credentials:
+   - **API key** (used by Picker)
+   - **App ID** (from Google Cloud project / OAuth consent screen configuration)
+4. Create `frontend/.env`:
+
+```env
+VITE_GOOGLE_CLIENT_ID=...
+VITE_GOOGLE_API_KEY=...
+VITE_GOOGLE_APP_ID=...
+```
+
+Restart the Vite dev server after adding env vars.
+
 ## Using the app
 
 1. **Upload** – Drag and drop or select one or more CSV or Excel files. Each file becomes a named dataset in the sidebar.
