@@ -4,13 +4,44 @@ import { runRegexSearch } from '../lib/run-regex-search'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+
+const REGEX_TEMPLATES: { id: string; label: string; value: string; note?: string }[] = [
+  { id: 'custom', label: 'Custom', value: '' },
+  { id: 'contains_text', label: 'Contains (substring)', value: 'your_text' },
+  { id: 'starts_with', label: 'Starts with', value: '^prefix' },
+  { id: 'ends_with', label: 'Ends with', value: 'suffix$' },
+  {
+    id: 'email',
+    label: 'Email address',
+    value: '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$',
+    note: 'Replace/adjust if needed for your domain rules',
+  },
+  { id: 'digits', label: 'Only digits', value: '^\\d+$' },
+  { id: 'digits_any', label: 'Digits anywhere', value: '\\d+' },
+  {
+    id: 'phone_us',
+    label: 'US phone (simple)',
+    value: '^\\+?1?\\s*\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$',
+  },
+  { id: 'date_ymd', label: 'Date YYYY-MM-DD', value: '^\\d{4}-\\d{2}-\\d{2}$' },
+  { id: 'caps_words', label: 'Capital words', value: '\\b[A-Z]{2,}\\b' },
+  { id: 'empty', label: 'Empty value', value: '^$' },
+]
 
 export function RegexSearchForm() {
   const { datasets, setResult } = useDatasets()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [columnsByDs, setColumnsByDs] = useState<Record<string, string[]>>({})
   const [regex, setRegex] = useState('')
+  const [templateId, setTemplateId] = useState('custom')
   const [searchAll, setSearchAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
@@ -113,11 +144,46 @@ export function RegexSearchForm() {
             ))}
           </div>
         )}
+
+        <div>
+          <Label>Regex templates</Label>
+          <Select
+            value={templateId}
+            onValueChange={(v) => {
+              setTemplateId(v)
+              const tmpl = REGEX_TEMPLATES.find((t) => t.id === v)
+              if (tmpl) {
+                setError(null)
+                setRegex(tmpl.value)
+              }
+            }}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Select a template" />
+            </SelectTrigger>
+            <SelectContent>
+              {REGEX_TEMPLATES.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {templateId !== 'custom' && REGEX_TEMPLATES.find((t) => t.id === templateId)?.note && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {REGEX_TEMPLATES.find((t) => t.id === templateId)?.note}
+            </p>
+          )}
+        </div>
+
         <div>
           <Label>Regex pattern</Label>
           <Input
             value={regex}
-            onChange={(e) => setRegex(e.target.value)}
+            onChange={(e) => {
+              setTemplateId('custom')
+              setRegex(e.target.value)
+            }}
             placeholder="e.g. ^[A-Z]+"
           />
           <Button type="button" variant="outline" size="sm" className="mt-1" onClick={handleTest}>
