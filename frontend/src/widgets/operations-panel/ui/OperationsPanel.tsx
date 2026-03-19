@@ -8,6 +8,10 @@ import { MergeJoinForm } from '@/features/merge-join'
 import { AggregateForm } from '@/features/aggregate'
 import { AskAIForm } from '@/features/ai-analytics'
 import { CoverageCheckForm } from '@/features/coverage-check'
+import { InactivityCheckForm } from '@/features/inactivity-check'
+import { ExceptionReportForm } from '@/features/exception-report'
+import { CleanDataForm } from '@/features/clean-data'
+import { CompareDatasetsForm } from '@/features/compare-datasets'
 
 export function OperationsPanel() {
   return (
@@ -21,6 +25,10 @@ export function OperationsPanel() {
           <TabsTrigger value="regex" className="flex-shrink-0 px-3 py-2 text-sm">Regex</TabsTrigger>
           <TabsTrigger value="merge" className="flex-shrink-0 px-3 py-2 text-sm">Merge</TabsTrigger>
           <TabsTrigger value="coverage" className="flex-shrink-0 px-3 py-2 text-sm">Coverage</TabsTrigger>
+          <TabsTrigger value="inactivity" className="flex-shrink-0 px-3 py-2 text-sm">Inactivity</TabsTrigger>
+          <TabsTrigger value="exceptions" className="flex-shrink-0 px-3 py-2 text-sm">Exceptions</TabsTrigger>
+          <TabsTrigger value="clean" className="flex-shrink-0 px-3 py-2 text-sm">Clean</TabsTrigger>
+          <TabsTrigger value="compare" className="flex-shrink-0 px-3 py-2 text-sm">Compare</TabsTrigger>
           <TabsTrigger value="aggregate" className="flex-shrink-0 px-3 py-2 text-sm">Aggregate</TabsTrigger>
           <TabsTrigger value="ai" className="flex-shrink-0 px-3 py-2 text-sm">Ask AI</TabsTrigger>
         </TabsList>
@@ -42,6 +50,18 @@ export function OperationsPanel() {
       </TabsContent>
       <TabsContent value="coverage" className="mt-0 focus-visible:outline-none">
         <CoverageCheckForm />
+      </TabsContent>
+      <TabsContent value="inactivity" className="mt-0 focus-visible:outline-none">
+        <InactivityCheckForm />
+      </TabsContent>
+      <TabsContent value="exceptions" className="mt-0 focus-visible:outline-none">
+        <ExceptionReportForm />
+      </TabsContent>
+      <TabsContent value="clean" className="mt-0 focus-visible:outline-none">
+        <CleanDataForm />
+      </TabsContent>
+      <TabsContent value="compare" className="mt-0 focus-visible:outline-none">
+        <CompareDatasetsForm />
       </TabsContent>
       <TabsContent value="aggregate" className="mt-0 focus-visible:outline-none">
         <AggregateForm />

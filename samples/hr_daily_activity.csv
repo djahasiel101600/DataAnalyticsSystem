@@ -1,0 +1,22 @@
+employee_id,name,status,last_activity,department
+E001,James Wilson,Active,2025-03-18,Fleet
+E002,Maria Garcia,active,2025-03-17,Fleet
+E003,Robert Chen,ACTIVE,2025-03-15,Fleet
+E004,Sarah Miller,Active,2025-03-18,Operations
+E005,David Kim,Inactive,2025-03-10,Fleet
+E006,Emily Davis,Active,2025-03-18,Warehouse
+E007,Michael Brown,inactive,2025-03-08,Fleet
+E008,Jennifer Lee,Active,2025-03-17,HR
+E009,Christopher Taylor,Needs Review,2025-03-12,Fleet
+E010,Amanda Martinez,Active,2025-03-18,Operations
+E011,Daniel White,Active,2025-03-11,Fleet
+E003,Robert Chen,Active,2025-03-15,Fleet
+E012,Lisa Anderson,Active,2025-03-18,Warehouse
+E013,Matthew Thomas,Active,2025-03-09,Fleet
+E014,Jessica Jackson,Active,2025-03-18,HR
+E015,Andrew Harris,ACTIVE,2025-03-07,Fleet
+E016,Nicole Clark,Active,2025-03-18,Fleet
+E017,William Lewis,Active,2025-03-16,Operations
+E018,Rachel Robinson,active,2025-03-14,Warehouse
+E019,Kevin Walker,Inactive,2025-03-05,Fleet
+E020,Olivia Hall,Active,2025-03-18,Fleet
