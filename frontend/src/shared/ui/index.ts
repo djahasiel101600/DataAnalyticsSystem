@@ -1,3 +1,4 @@
+export { StatusPill } from './status-pill'
 export { Button, buttonVariants } from './button'
 export { Card, CardHeader, CardTitle, CardContent } from './card'
 export { Input } from './input'

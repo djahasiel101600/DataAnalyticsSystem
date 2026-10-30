@@ -96,13 +96,33 @@ Example:
 
 ### Lookup (VLOOKUP-style enrichment)
 
-Use to “bring columns over” from a lookup table.
+Use to append selected columns from a Lookup Dataset to each row in a Source
+Dataset. Lookup preserves the Source Dataset's row count and order; use Merge
+/ Join instead when you intentionally want relational row expansion.
 
-- **Multiple key columns**: composite lookups.
-- **Same-table lookup**: lookup within a single dataset (useful for manager relationships).
+- **Primary strategy**: required, with one or more source-to-lookup key pairs.
+  Every pair in a strategy must match (AND semantics).
+- **Fallback strategies**: optional and ordered. A fallback runs only when the
+  prior strategy has zero candidates. A unique match or an ambiguous result
+  stops the strategy chain.
+- **Return columns**: choose the Lookup Dataset columns to append. Columns
+  that collide with the source are unavailable.
+- **Normalization**: trim whitespace and ignore case are enabled by default
+  and can be turned off. Text and numeric values are compared as distinct
+  types; implicit type conversion and fuzzy matching are not performed.
+- **Empty keys**: a strategy with any missing, null, or empty key component
+  cannot match. Empty keys never match other empty keys.
+- **Duplicates**: multiple candidates produce an `ambiguous` diagnostic; the
+  operation does not choose an arbitrary row or expand the output.
+- **Unmatched rows**: remain in the output with blank returned values.
+- **Diagnostics**: after running, review matched / ambiguous / unmatched
+  counts, per-strategy counts, and row-level source/lookup row references in
+  the Lookup panel.
 
 Common HR example:
-- In `employees`, lookup `manager_id` → `id` to bring manager name.
+- Choose an employee list as the Source Dataset and an employee reference
+  table as the Lookup Dataset. Match `employee_id` to `id`, then return the
+  department or other reference fields.
 
 ---
 
@@ -227,4 +247,3 @@ The AI is sent:
 
 - General feature samples: `samples/SAMPLE_QUESTIONS.md`
 - HR multi-workbook workflow: `samples/HR_INACTIVE_EMPLOYEE_TASKS.md`
-

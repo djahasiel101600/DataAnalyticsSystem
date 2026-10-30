@@ -114,6 +114,24 @@ The operations are in tabs in the middle-left area. Here is what each one does, 
 
 ### 3.2 Lookup (like VLOOKUP in Excel)
 
+Lookup appends selected Lookup Dataset columns to Source Dataset rows without
+changing source row count or order.
+
+1. Select different Source and Lookup datasets.
+2. Configure the required Primary Strategy with one or more source-to-lookup
+   key pairs. Every pair in a strategy must match.
+3. Optionally add fallback strategies and move them to set their priority.
+   A fallback is tried only after zero candidates; an ambiguous result stops
+   the strategy chain.
+4. Choose lookup columns to append, then run Lookup.
+
+Trim and case-insensitive comparison are enabled by default. Empty/missing key
+components never match, and text/numeric values are not automatically
+converted. Duplicate lookup candidates are reported as ambiguous; no candidate
+is chosen arbitrarily. Unmatched and ambiguous source rows remain in the
+result with blank returned values. Review the Lookup panel's execution summary
+and row-level diagnostics for strategy outcomes and row references.
+
 ---
 
 ### 3.3 Filter & Sort

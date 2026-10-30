@@ -1,6 +1,6 @@
 import type { DataRow } from '@/entities/dataset'
 
-function escapeCSV(value: string | number): string {
+function escapeCSV(value: string | number | boolean): string {
   const s = String(value)
   if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`

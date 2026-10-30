@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx'
 import type { DataRow } from '@/entities/dataset'
 
 export function downloadXLSX(columns: string[], rows: DataRow[], filename = 'export.xlsx') {
-  const wsData = [columns] as (string | number)[][]
+  const wsData = [columns] as (string | number | boolean)[][]
   for (const row of rows) {
     wsData.push(columns.map((c) => row[c] ?? ''))
   }

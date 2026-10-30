@@ -1,10 +1,15 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  TableProperties,
+} from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   type ColumnDef,
-} from '@tanstack/react-table'
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -12,49 +17,54 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/shared/ui/table'
-import { Button } from '@/shared/ui/button'
-import type { DataRow } from '@/entities/dataset'
+} from "@/shared/ui/table";
+import { Button } from "@/shared/ui/button";
+import type { DataRow } from "@/entities/dataset";
 
-const DEFAULT_PAGE_SIZE = 50
-const PAGE_SIZE_OPTIONS = [50, 100, 200, 500]
+const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
 
 export interface TableHighlight {
-  pattern: string
-  matchColumnHeader: string
+  pattern: string;
+  matchColumnHeader: string;
 }
 
 interface DataTableViewProps {
-  columns: string[]
-  rows: DataRow[]
-  maxRows?: number
-  highlight?: TableHighlight | null
-  showNullCounts?: boolean
-  showPagination?: boolean
+  columns: string[];
+  rows: DataRow[];
+  maxRows?: number;
+  highlight?: TableHighlight | null;
+  showNullCounts?: boolean;
+  showPagination?: boolean;
 }
 
 function HighlightedCell({ value, pattern }: { value: string; pattern: string }) {
   try {
-    const re = new RegExp(`(${pattern})`, 'gi')
-    const parts = value.split(re)
+    const re = new RegExp(`(${pattern})`, "gi");
+    const parts = value.split(re);
     return (
       <>
         {parts.map((part, i) =>
           i % 2 === 1 ? (
-            <mark key={i} className="bg-highlight text-highlight-foreground rounded px-0.5 font-medium shadow-sm">{part}</mark>
+            <mark
+              key={i}
+              className="rounded bg-highlight px-0.5 font-medium text-highlight-foreground"
+            >
+              {part}
+            </mark>
           ) : (
             <span key={i}>{part}</span>
-          )
+          ),
         )}
       </>
-    )
+    );
   } catch {
-    return <span>{value}</span>
+    return <span>{value}</span>;
   }
 }
 
-function empty(v: unknown): boolean {
-  return v === '' || v === null || v === undefined
+function empty(value: unknown): boolean {
+  return value === "" || value === null || value === undefined;
 }
 
 export function DataTableView({
@@ -65,105 +75,77 @@ export function DataTableView({
   showNullCounts = true,
   showPagination = true,
 }: DataTableViewProps) {
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(maxRows ?? DEFAULT_PAGE_SIZE)
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
-  const currentPage = Math.min(page, totalPages - 1)
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(maxRows ?? DEFAULT_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages - 1);
   const pageRows = useMemo(
     () => rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize),
-    [rows, currentPage, pageSize]
-  )
+    [rows, currentPage, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [columns, rows, pageSize]);
 
   const nullCounts = useMemo(() => {
-    if (!showNullCounts) return null
-    const counts: Record<string, number> = {}
-    for (const col of columns) {
-      counts[col] = rows.filter((r) => empty(r[col])).length
+    if (!showNullCounts) return null;
+    const counts: Record<string, number> = {};
+    for (const column of columns) {
+      counts[column] = rows.filter((row) => empty(row[column])).length;
     }
-    return counts
-  }, [columns, rows, showNullCounts])
+    return counts;
+  }, [columns, rows, showNullCounts]);
 
-  const tableColumns: ColumnDef<DataRow>[] = columns.map((col) => ({
-    accessorKey: col,
-    header: col,
-    cell: ({ getValue, row }) => {
-      const v = getValue()
-      if (v === '' || v === null || v === undefined) {
-        return <span className="text-muted-foreground">—</span>
-      }
-      const str = String(v)
-      const isMatchCell = highlight && highlight.matchColumnHeader && row.original[highlight.matchColumnHeader] === col
-      if (isMatchCell && highlight.pattern) {
-        return <HighlightedCell value={str} pattern={highlight.pattern} />
-      }
-      return str
+  const tableColumns: ColumnDef<DataRow>[] = [
+    {
+      id: "row-number",
+      header: "#",
+      cell: ({ row }) => currentPage * pageSize + row.index + 1,
     },
-  }))
+    ...columns.map((column): ColumnDef<DataRow> => ({
+      accessorKey: column,
+      header: column,
+      cell: ({ getValue, row }) => {
+        const value = getValue();
+        if (empty(value)) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        const text = String(value);
+        const isMatchCell =
+          highlight &&
+          highlight.matchColumnHeader &&
+          row.original[highlight.matchColumnHeader] === column;
+        if (isMatchCell && highlight.pattern) {
+          return <HighlightedCell value={text} pattern={highlight.pattern} />;
+        }
+        return text;
+      },
+    })),
+  ];
 
   const table = useReactTable({
     data: pageRows,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">
-        {rows.length} row{rows.length !== 1 ? 's' : ''}
-        {showPagination && rows.length > pageSize && ` · Page ${currentPage + 1} of ${totalPages}`}
-      </p>
-      {nullCounts && (
-        <details className="text-xs text-muted-foreground">
-          <summary>Null/empty counts per column</summary>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-            {columns.map((col) => (
-              <span key={col}>
-                {col}: {nullCounts[col] ?? 0}
-              </span>
-            ))}
-          </div>
-        </details>
-      )}
-      {showPagination && rows.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages - 1}
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          >
-            Next
-          </Button>
-          <select
-            className="h-9 rounded-md border px-2 text-sm"
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value))
-              setPage(0)
-            }}
-          >
-            {PAGE_SIZE_OPTIONS.map((n) => (
-              <option key={n} value={n}>{n} per page</option>
-            ))}
-          </select>
-        </div>
-      )}
-      <div className="rounded-md border overflow-auto max-h-[60vh] min-w-0 w-full">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
-                {hg.headers.map((h) => (
-                  <TableHead key={h.id}>
-                    {flexRender(h.column.columnDef.header, h.getContext())}
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <Table className="min-w-max text-xs">
+          <TableHeader className="sticky top-0 z-10">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header, index) => (
+                  <TableHead
+                    key={header.id}
+                    className={[
+                      "h-8 whitespace-nowrap bg-muted/80 px-3 text-[10px] font-semibold normal-case tracking-normal text-muted-foreground",
+                      index === 0 ? "w-10 px-2" : "",
+                    ].join(" ")}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -172,15 +154,30 @@ export function DataTableView({
           <TableBody>
             {table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No rows
                 </TableCell>
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                <TableRow
+                  key={row.id}
+                  className="[&>td]:px-3 [&>td]:py-1.5 [&>td]:text-xs"
+                >
+                  {row.getVisibleCells().map((cell, index) => (
+                    <TableCell
+                      key={cell.id}
+                      className={[
+                        "max-w-[320px] truncate",
+                        index === 0
+                          ? "w-10 px-2 text-[10px] tabular-nums text-muted-foreground"
+                          : "",
+                      ].join(" ")}
+                      title={index === 0 ? undefined : String(cell.getValue() ?? "")}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -190,6 +187,78 @@ export function DataTableView({
           </TableBody>
         </Table>
       </div>
+
+      <div className="flex flex-none flex-wrap items-center justify-between gap-2 border-t border-border bg-card px-3 py-2">
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <TableProperties className="h-3.5 w-3.5" />
+          <span>
+            {rows.length.toLocaleString()} rows · {columns.length} columns
+          </span>
+          {nullCounts && (
+            <details className="relative">
+              <summary className="cursor-pointer rounded px-1 hover:bg-muted">
+                Null counts
+              </summary>
+              <div className="absolute bottom-7 left-0 z-20 max-h-40 min-w-48 overflow-auto rounded-md border border-border bg-card p-2 shadow-lg">
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {columns.map((column) => (
+                    <span key={column}>
+                      {column}: {nullCounts[column] ?? 0}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )}
+        </div>
+
+        {showPagination && rows.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <select
+              className="h-7 rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(0);
+              }}
+              aria-label="Rows per page"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size} / page
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              disabled={currentPage <= 0}
+              onClick={() => setPage((value) => Math.max(0, value - 1))}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="min-w-12 text-center text-[11px] text-muted-foreground">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() =>
+                setPage((value) => Math.min(totalPages - 1, value + 1))
+              }
+              aria-label="Next page"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
-  )
+  );
 }

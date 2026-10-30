@@ -64,4 +64,25 @@ describe('runCleanData', () => {
     const { rows: upper } = runCleanData(dataset, { columns: ['status'], uppercase: true })
     expect(upper.every((r) => String(r.status) === String(r.status).toUpperCase())).toBe(true)
   })
+
+  it('preserves boolean values and handles explicit nulls as empty values', () => {
+    const typedDataset = {
+      ...dataset,
+      columns: ['active', 'note'],
+      rows: [
+        { active: false, note: null },
+        { active: true, note: '' },
+      ],
+    }
+    const { rows } = runCleanData(typedDataset, {
+      columns: ['active', 'note'],
+      lowercase: true,
+      fillEmpty: 'missing',
+    })
+
+    expect(rows).toEqual([
+      { active: false, note: 'missing' },
+      { active: true, note: 'missing' },
+    ])
+  })
 })

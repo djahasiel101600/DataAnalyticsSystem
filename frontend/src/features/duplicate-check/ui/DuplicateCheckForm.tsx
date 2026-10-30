@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDatasets } from '@/app/store/DatasetsContext'
 import {
   runDuplicateCheck,
@@ -33,6 +33,10 @@ export function DuplicateCheckForm() {
   const [ignoreCase, setIgnoreCase] = useState(false)
   const [trim, setTrim] = useState(false)
   const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    if (!datasetId && datasets.length > 0) setDatasetId(datasets[0].id)
+  }, [datasetId, datasets])
 
   const dataset = datasetId ? getDataset(datasetId) : null
   const columns = dataset?.columns ?? []

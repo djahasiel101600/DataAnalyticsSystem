@@ -3,7 +3,6 @@ import type { DataRow } from '@/entities/dataset'
 import { useDatasets } from '@/app/store/DatasetsContext'
 import { hasSavedSession, saveSession, loadSession, clearSavedSession } from '../lib/session-storage'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 
 export function RecentSessionCard() {
   const { datasets, result, loadSession: applySession } = useDatasets()
@@ -41,28 +40,23 @@ export function RecentSessionCard() {
   }
 
   return (
-    <Card className="border-0 shadow-none bg-transparent">
-      <CardHeader className="p-0 pb-2">
-        <CardTitle className="text-sm font-medium">Recent session</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 space-y-2">
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save session'}
-          </Button>
-          {hasSession && (
-            <>
-              <Button size="sm" onClick={handleRestore}>
-                Restore session
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleClear}>
-                Clear saved
-              </Button>
-            </>
-          )}
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </CardContent>
-    </Card>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save session'}
+        </Button>
+        {hasSession && (
+          <>
+            <Button size="sm" className="h-7 text-xs" onClick={handleRestore}>
+              Restore
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleClear}>
+              Clear saved
+            </Button>
+          </>
+        )}
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }

@@ -2,7 +2,7 @@ import type { DataRow } from '@/entities/dataset'
 
 export function downloadJSON(columns: string[], rows: DataRow[], filename = 'export.json') {
   const data = rows.map((row) => {
-    const obj: Record<string, string | number> = {}
+    const obj: Record<string, string | number | boolean> = {}
     for (const c of columns) {
       obj[c] = row[c] ?? ''
     }

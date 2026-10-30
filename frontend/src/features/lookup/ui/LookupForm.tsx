@@ -1,9 +1,14 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, Check, Plus, Trash2, X } from "lucide-react";
+﻿import { useState } from "react";
+import { ArrowDown, ArrowUp, Plus } from "lucide-react";
 import { useDatasets } from "@/app/store/DatasetsContext";
-import { runLookup, type KeyPair } from "../lib/run-lookup";
+import {
+  runLookup,
+  type KeyPair,
+  type LookupOptions,
+  type LookupRecordDiagnostic,
+  type LookupSummary,
+} from "../lib/run-lookup";
 import { Button } from "@/shared/ui/button";
-import { Label } from "@/shared/ui/label";
 import {
   Select,
   SelectContent,
@@ -12,55 +17,45 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { StatusPill } from "@/shared/ui/status-pill";
 
 const emptyPair = (): KeyPair => ({ sourceColumn: "", lookupColumn: "" });
 
-function StepHeading({
-  n,
-  title,
-  hint,
-}: {
-  n: number;
-  title: string;
-  hint?: string;
-}) {
+const toggleIn = (list: string[], item: string) =>
+  list.includes(item) ? list.filter((c) => c !== item) : [...list, item];
+
+const isComplete = (p: KeyPair) => Boolean(p.sourceColumn && p.lookupColumn);
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
-        {n}
-      </span>
-      <div>
-        <h3 className="text-sm font-semibold leading-5 text-foreground">
-          {title}
-        </h3>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </div>
-    </div>
+    <p className="pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      {children}
+    </p>
   );
 }
 
-function ColumnSelect({
+function OptionSelect({
   value,
   onChange,
-  columns,
+  options,
   placeholder,
   label,
 }: {
   value: string;
-  onChange: (v: string) => void;
-  columns: string[];
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
   placeholder: string;
   label: string;
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full" aria-label={label}>
+      <SelectTrigger aria-label={label}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {columns.map((c) => (
-          <SelectItem key={c} value={c}>
-            {c}
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
           </SelectItem>
         ))}
       </SelectContent>
@@ -68,523 +63,648 @@ function ColumnSelect({
   );
 }
 
-/**
- * True when a fallback set has been "started" but is not fully complete.
- *
- * - A set where every pair is empty is considered *empty* and is allowed —
- *   `runLookup` will silently drop it.
- * - A set where at least one pair has a value but not every pair is
- *   complete is considered *incomplete* and must be resolved by the user.
- */
-function hasIncompleteFallback(sets: KeyPair[][]): boolean {
-  return sets.some((set) => {
-    const anyFilled = set.some((p) => p.sourceColumn || p.lookupColumn);
-    const allComplete = set.every((p) => p.sourceColumn && p.lookupColumn);
-    return anyFilled && !allComplete;
-  });
+function ColumnPicker({
+  columns,
+  selected,
+  onToggle,
+  disabledColumns = [],
+  emptyLabel = "No columns available.",
+}: {
+  columns: string[];
+  selected: string[];
+  onToggle: (column: string) => void;
+  /** Columns that cannot be picked (e.g. they would collide with a source column). */
+  disabledColumns?: string[];
+  emptyLabel?: string;
+}) {
+  if (columns.length === 0) {
+    return <p className="text-[11px] text-muted-foreground">{emptyLabel}</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {columns.map((column) => {
+        const active = selected.includes(column);
+        const disabled = disabledColumns.includes(column);
+        return (
+          <button
+            key={column}
+            type="button"
+            onClick={() => onToggle(column)}
+            aria-pressed={active}
+            disabled={disabled}
+            className={
+              "max-w-full truncate rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40" +
+              (active
+                ? " border-primary bg-primary/10 text-primary"
+                : " border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground")
+            }
+            title={
+              disabled ? `${column} already exists in the source table` : column
+            }
+          >
+            {column}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Edits one set of source→lookup key pairs (used for primary and each fallback). */
+function KeyPairEditor({
+  pairs,
+  onChange,
+  sourceColumns,
+  lookupColumns,
+  minPairs,
+  name,
+}: {
+  pairs: KeyPair[];
+  onChange: (pairs: KeyPair[]) => void;
+  sourceColumns: string[];
+  lookupColumns: string[];
+  minPairs: number;
+  name: string;
+}) {
+  const sourceOptions = sourceColumns.map((c) => ({ value: c, label: c }));
+  const lookupOptions = lookupColumns.map((c) => ({ value: c, label: c }));
+
+  const update = (index: number, patch: Partial<KeyPair>) =>
+    onChange(pairs.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+
+  return (
+    <div className="space-y-2">
+      {pairs.map((pair, i) => (
+        <div
+          key={i}
+          className="rounded-lg border border-border bg-muted/25 p-2"
+        >
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center">
+            <OptionSelect
+              value={pair.sourceColumn}
+              onChange={(v) => update(i, { sourceColumn: v })}
+              options={sourceOptions}
+              placeholder="Column in source table"
+              label={`${name} source key ${i + 1}`}
+            />
+            <span className="hidden text-center text-xs font-medium text-muted-foreground sm:block">
+              =
+            </span>
+            <OptionSelect
+              value={pair.lookupColumn}
+              onChange={(v) => update(i, { lookupColumn: v })}
+              options={lookupOptions}
+              placeholder="Column in lookup table"
+              label={`${name} lookup key ${i + 1}`}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+              onClick={() => onChange(pairs.filter((_, j) => j !== i))}
+              disabled={pairs.length <= minPairs}
+              aria-label={`Remove ${name} key pair ${i + 1}`}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...pairs, emptyPair()])}
+      >
+        <Plus className="mr-1.5 h-4 w-4" />
+        Add key pair
+      </Button>
+    </div>
+  );
+}
+
+function OptionCheckbox({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+      <input
+        type="checkbox"
+        className="h-4 w-4 accent-primary"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      {label}
+    </label>
+  );
 }
 
 export function LookupForm() {
   const { datasets, getDataset, setResult } = useDatasets();
-  const [sourceId, setSourceId] = useState<string>("");
-  const [lookupId, setLookupId] = useState<string>("");
-  const [keyPairs, setKeyPairs] = useState<KeyPair[]>([emptyPair()]);
-  const [fallbackKeySets, setFallbackKeySets] = useState<KeyPair[][]>([]);
-  const [retrieveColumns, setRetrieveColumns] = useState<string[]>([]);
-  const [ignoreCase, setIgnoreCase] = useState(false);
-  const [trim, setTrim] = useState(false);
-  const [excludeUnmatched, setExcludeUnmatched] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [diagnostics, setDiagnostics] = useState<string[]>([]);
 
-  const source = sourceId ? getDataset(sourceId) : null;
-  const lookup = lookupId ? getDataset(lookupId) : null;
-  const lookupCols = lookup?.columns ?? [];
+  const [sourceId, setSourceId] = useState("");
+  const [lookupId, setLookupId] = useState("");
+  const [primaryPairs, setPrimaryPairs] = useState<KeyPair[]>([emptyPair()]);
+  const [fallbackSets, setFallbackSets] = useState<KeyPair[][]>([]);
+  const [retrieve, setRetrieve] = useState<string[]>([]);
+  const [options, setOptions] = useState<
+    Required<Pick<LookupOptions, "ignoreCase" | "trim">>
+  >({
+    ignoreCase: true,
+    trim: true,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
+  const [recordDiagnostics, setRecordDiagnostics] = useState<
+    LookupRecordDiagnostic[] | null
+  >(null);
+  const [summary, setSummary] = useState<LookupSummary | null>(null);
+  const [diagnosticFilter, setDiagnosticFilter] = useState("all");
+  const [diagnosticLimit, setDiagnosticLimit] = useState(100);
 
-  // Changing a dataset invalidates column choices, diagnostics, and any
-  // result that was derived from the previous configuration.
-  const changeSource = (id: string) => {
-    setSourceId(id);
-    setKeyPairs([emptyPair()]);
-    setFallbackKeySets([]);
-    setDiagnostics([]);
-    setResult(null);
-  };
-  const changeLookup = (id: string) => {
-    setLookupId(id);
-    setKeyPairs([emptyPair()]);
-    setFallbackKeySets([]);
-    setRetrieveColumns([]);
-    setDiagnostics([]);
-    setResult(null);
-  };
-
-  const addKeyPair = () => setKeyPairs((prev) => [...prev, emptyPair()]);
-  const removeKeyPair = (index: number) =>
-    setKeyPairs((prev) => prev.filter((_, i) => i !== index));
-  const updateKeyPair = (index: number, patch: Partial<KeyPair>) =>
-    setKeyPairs((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
-    );
-
-  const addFallbackSet = () =>
-    setFallbackKeySets((prev) => [...prev, [emptyPair()]]);
-  const removeFallbackSet = (index: number) =>
-    setFallbackKeySets((prev) => prev.filter((_, i) => i !== index));
-  const addFallbackPair = (setIndex: number) =>
-    setFallbackKeySets((prev) =>
-      prev.map((s, i) => (i === setIndex ? [...s, emptyPair()] : s)),
-    );
-  const removeFallbackPair = (setIndex: number, pairIndex: number) =>
-    setFallbackKeySets((prev) =>
-      prev
-        .map((s, i) =>
-          i === setIndex ? s.filter((_, j) => j !== pairIndex) : s,
-        )
-        .filter((s) => s.length > 0),
-    );
-  const updateFallbackSet = (
-    setIndex: number,
-    pairIndex: number,
-    patch: Partial<KeyPair>,
-  ) =>
-    setFallbackKeySets((prev) =>
-      prev.map((set, i) =>
-        i === setIndex
-          ? set.map((p, j) => (j === pairIndex ? { ...p, ...patch } : p))
-          : set,
-      ),
-    );
-
-  const toggleRetrieve = (col: string) =>
-    setRetrieveColumns((prev) =>
-      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col],
-    );
-
-  // Derived state (memoized so `handleRun` and render agree on the same value).
-  const keysIncomplete = useMemo(
-    () => keyPairs.some((p) => !p.sourceColumn || !p.lookupColumn),
-    [keyPairs],
+  const source = sourceId ? getDataset(sourceId) : undefined;
+  const lookup = lookupId ? getDataset(lookupId) : undefined;
+  const sourceColumns = source?.columns ?? [];
+  const lookupColumns = lookup?.columns ?? [];
+  // runLookup throws if a retrieved column already exists on the source.
+  const collidingColumns = lookupColumns.filter((c) =>
+    sourceColumns.includes(c),
   );
-  const incompleteFallback = useMemo(
-    () => hasIncompleteFallback(fallbackKeySets),
-    [fallbackKeySets],
-  );
-  const noRetrieve = retrieveColumns.length === 0;
+
+  const completeStrategies =
+    primaryPairs.length > 0 &&
+    primaryPairs.every(isComplete) &&
+    fallbackSets.every(
+      (pairs) => pairs.length > 0 && pairs.every(isComplete),
+    );
+  const canRun =
+    Boolean(source && lookup) &&
+    completeStrategies &&
+    retrieve.length > 0;
+
+  const clearStatus = () => {
+    setError(null);
+    setDiagnostics(null);
+    setRecordDiagnostics(null);
+    setSummary(null);
+  };
+
+  const resetConfig = () => {
+    setPrimaryPairs([emptyPair()]);
+    setFallbackSets([]);
+    setRetrieve([]);
+    clearStatus();
+  };
 
   const handleRun = () => {
     if (!source || !lookup) return;
-
-    // Defensive: the button is disabled in these states, but check anyway so
-    // that a race between render and click can't run with a broken config.
-    if (incompleteFallback) {
-      setDiagnostics([
-        "Complete every key pair in each fallback set (or remove empty sets).",
-      ]);
-      return;
-    }
-
-    const validPairs = keyPairs.filter((p) => p.sourceColumn && p.lookupColumn);
-    if (validPairs.length === 0) return;
-
-    setRunning(true);
+    clearStatus();
     try {
-      // Pass `fallbackKeySets` verbatim — `runLookup` filters empty sets and
-      // preserves original indices so `fallback_N` matches the UI's
-      // "Fallback N" numbering. Pre-filtering here would renumber them.
-      const { columns, rows, diagnostics } = runLookup(
+      const { columns, rows, diagnostics, recordDiagnostics, summary } = runLookup(
         source,
-        validPairs,
+        primaryPairs,
         lookup,
-        retrieveColumns,
-        fallbackKeySets,
-        { ignoreCase, trim, excludeUnmatched },
+        retrieve,
+        fallbackSets,
+        options,
       );
       setResult({ columns, rows });
       setDiagnostics(diagnostics);
-      if (diagnostics.length > 0) {
-        console.log(diagnostics.join(" ; "));
-      }
+      setRecordDiagnostics(recordDiagnostics);
+      setSummary(summary);
+      setDiagnosticLimit(100);
     } catch (err) {
-      console.error(err);
-      setDiagnostics([err instanceof Error ? err.message : String(err)]);
-    } finally {
-      setRunning(false);
+      setResult(null);
+      setError(err instanceof Error ? err.message : "Unknown lookup error");
     }
   };
 
-  if (datasets.length === 0) return null;
+  if (datasets.length < 2) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Lookup Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Import at least two datasets (a source and a lookup table) to run a
+            lookup.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const canRun =
-    !!source &&
-    !!lookup &&
-    !keysIncomplete &&
-    !incompleteFallback &&
-    !noRetrieve &&
-    !running;
-
-  const blocker =
-    !source || !lookup
-      ? "Choose both datasets to begin."
-      : keysIncomplete
-        ? "Complete every key pair (or remove empty ones)."
-        : incompleteFallback
-          ? "Complete every key pair in each fallback set (or remove empty sets)."
-          : noRetrieve
-            ? "Select at least one column to retrieve."
-            : null;
-
-  const options = [
-    {
-      id: "excl",
-      label: "Exclude unmatched rows",
-      hint: "Drop source rows with no match",
-      checked: excludeUnmatched,
-      set: setExcludeUnmatched,
-    },
-    {
-      id: "case",
-      label: "Ignore case",
-      hint: '"abc" matches "ABC"',
-      checked: ignoreCase,
-      set: setIgnoreCase,
-    },
-    {
-      id: "trim",
-      label: "Trim spaces",
-      hint: "Ignore leading/trailing spaces",
-      checked: trim,
-      set: setTrim,
-    },
-  ];
+  const datasetOptions = datasets.map((d) => ({ value: d.id, label: d.name }));
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Lookup (cross-sheet)</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Pull columns from a lookup table into your source rows by matching key
-          columns.
-        </p>
+      <CardHeader>
+        <CardTitle>Lookup Configuration</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Step 1: datasets */}
-        <section className="space-y-3">
-          <StepHeading n={1} title="Choose datasets" />
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-            <div className="space-y-1.5">
-              <Label>Source dataset</Label>
-              <Select value={sourceId} onValueChange={changeSource}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {datasets.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Rows you want to enrich
-              </p>
-            </div>
-            <ArrowRight
-              className="hidden h-4 w-4 self-center text-muted-foreground sm:block"
-              aria-hidden="true"
+        <StatusPill
+          label="Lookup status"
+          value={diagnostics ? "Lookup complete" : "Configure lookup"}
+          tone={diagnostics ? "primary" : "muted"}
+        />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <SectionLabel>Source Dataset</SectionLabel>
+            <OptionSelect
+              value={sourceId}
+              onChange={(v) => {
+                setSourceId(v);
+                resetConfig();
+              }}
+              options={datasetOptions.filter((o) => o.value !== lookupId)}
+              placeholder="Choose source dataset"
+              label="Source dataset"
             />
-            <div className="space-y-1.5">
-              <Label>Lookup dataset</Label>
-              <Select value={lookupId} onValueChange={changeLookup}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select lookup table" />
-                </SelectTrigger>
-                <SelectContent>
-                  {datasets.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Table to read values from
-              </p>
-            </div>
           </div>
-        </section>
+          <div>
+            <SectionLabel>Lookup Dataset</SectionLabel>
+            <OptionSelect
+              value={lookupId}
+              onChange={(v) => {
+                setLookupId(v);
+                resetConfig();
+              }}
+              options={datasetOptions.filter((o) => o.value !== sourceId)}
+              placeholder="Choose lookup dataset"
+              label="Lookup dataset"
+            />
+          </div>
+        </div>
 
         {source && lookup && (
           <>
-            {/* Step 2: keys */}
-            <section className="space-y-3 border-t border-border pt-4">
-              <StepHeading
-                n={2}
-                title="Match on key columns"
-                hint="Rows match when all key pairs are equal."
+            <div>
+              <SectionLabel>Primary Strategy · Priority 1</SectionLabel>
+              <p className="mb-2 text-[11px] text-muted-foreground">
+                Every key pair in a strategy must match. Fallback strategies
+                run only when the current strategy has zero candidates.
+              </p>
+              <KeyPairEditor
+                name="Primary"
+                pairs={primaryPairs}
+                onChange={(p) => {
+                  clearStatus();
+                  setPrimaryPairs(p);
+                }}
+                sourceColumns={sourceColumns}
+                lookupColumns={lookupColumns}
+                minPairs={1}
               />
-              <div className="space-y-2">
-                {keyPairs.map((pair, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-end gap-2 rounded-md border border-border bg-muted/20 p-2"
-                  >
-                    <div className="grid flex-1 min-w-0 gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-                      <ColumnSelect
-                        value={pair.sourceColumn}
-                        onChange={(v) =>
-                          updateKeyPair(idx, { sourceColumn: v })
-                        }
-                        columns={source.columns}
-                        placeholder="Source column"
-                        label={`Key pair ${idx + 1} source column`}
-                      />
-                      <span className="hidden text-center text-xs font-medium text-muted-foreground sm:block">
-                        =
-                      </span>
-                      <ColumnSelect
-                        value={pair.lookupColumn}
-                        onChange={(v) =>
-                          updateKeyPair(idx, { lookupColumn: v })
-                        }
-                        columns={lookup.columns}
-                        placeholder="Lookup column"
-                        label={`Key pair ${idx + 1} lookup column`}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 flex-shrink-0"
-                      onClick={() => removeKeyPair(idx)}
-                      disabled={keyPairs.length <= 1}
-                      aria-label={`Remove key pair ${idx + 1}`}
-                      title={
-                        keyPairs.length <= 1
-                          ? "At least one key pair is required"
-                          : "Remove key pair"
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addKeyPair}
-              >
-                <Plus className="mr-1 h-4 w-4" /> Add key pair
-              </Button>
+              {primaryPairs.some((pair) => !isComplete(pair)) && (
+                <p className="mt-1.5 text-[11px] text-destructive">
+                  Select both columns for every primary key pair.
+                </p>
+              )}
+            </div>
 
-              {/* Fallbacks */}
-              <div className="space-y-2 pt-2">
-                <div>
-                  <Label>Fallback key sets (optional)</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Tried only if the primary keys find no match. The first
-                    match found wins.
-                  </p>
-                </div>
-                {fallbackKeySets.map((set, si) => (
+            <div>
+              <SectionLabel>Fallback Strategies</SectionLabel>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Tried in order only when the previous strategy finds zero
+                candidates. An ambiguous strategy stops the lookup.
+              </p>
+              <div className="space-y-3">
+                {fallbackSets.map((set, i) => (
                   <div
-                    key={si}
-                    className="rounded-md border border-dashed border-border p-2.5 space-y-2"
+                    key={i}
+                    className="space-y-2 rounded-lg border border-dashed border-border p-2"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">
-                        Fallback {si + 1}
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Fallback {i + 1}
                       </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
-                        onClick={() => removeFallbackSet(si)}
-                      >
-                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Remove set
-                      </Button>
-                    </div>
-                    {set.map((pair, pi) => (
-                      <div key={pi} className="flex items-center gap-2">
-                        <div className="grid flex-1 min-w-0 gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-                          <ColumnSelect
-                            value={pair.sourceColumn}
-                            onChange={(v) =>
-                              updateFallbackSet(si, pi, { sourceColumn: v })
-                            }
-                            columns={source.columns}
-                            placeholder="Source column"
-                            label={`Fallback ${si + 1} pair ${pi + 1} source column`}
-                          />
-                          <span className="hidden text-center text-xs font-medium text-muted-foreground sm:block">
-                            =
-                          </span>
-                          <ColumnSelect
-                            value={pair.lookupColumn}
-                            onChange={(v) =>
-                              updateFallbackSet(si, pi, { lookupColumn: v })
-                            }
-                            columns={lookup.columns}
-                            placeholder="Lookup column"
-                            label={`Fallback ${si + 1} pair ${pi + 1} lookup column`}
-                          />
-                        </div>
+                      <div className="flex items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={() => removeFallbackPair(si, pi)}
-                          aria-label={`Remove pair ${pi + 1} from fallback ${si + 1}`}
+                          className="h-7 w-7"
+                          disabled={i === 0}
+                          onClick={() => {
+                            clearStatus();
+                            setFallbackSets((prev) => {
+                              const next = [...prev];
+                              [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                              return next;
+                            });
+                          }}
+                          aria-label={`Move fallback ${i + 1} up`}
+                          title="Increase strategy priority"
                         >
-                          <X className="h-4 w-4" />
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={i === fallbackSets.length - 1}
+                          onClick={() => {
+                            clearStatus();
+                            setFallbackSets((prev) => {
+                              const next = [...prev];
+                              [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                              return next;
+                            });
+                          }}
+                          aria-label={`Move fallback ${i + 1} down`}
+                          title="Decrease strategy priority"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            clearStatus();
+                            setFallbackSets((prev) =>
+                              prev.filter((_, j) => j !== i),
+                            );
+                          }}
+                        >
+                          Remove
                         </Button>
                       </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => addFallbackPair(si)}
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Add pair
-                    </Button>
+                    </div>
+                    <KeyPairEditor
+                      name={`Fallback ${i + 1}`}
+                      pairs={set}
+                      onChange={(p) => {
+                        clearStatus();
+                        setFallbackSets((prev) =>
+                          prev.map((s, j) => (j === i ? p : s)),
+                        );
+                      }}
+                      sourceColumns={sourceColumns}
+                      lookupColumns={lookupColumns}
+                      minPairs={1}
+                    />
+                    {set.some((pair) => !isComplete(pair)) && (
+                      <p className="text-[11px] text-destructive">
+                        Select both columns for every key pair in this fallback.
+                      </p>
+                    )}
                   </div>
                 ))}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={addFallbackSet}
+                  onClick={() => {
+                    clearStatus();
+                    setFallbackSets((prev) => [...prev, [emptyPair()]]);
+                  }}
                 >
-                  <Plus className="mr-1 h-4 w-4" /> Add fallback set
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Add fallback strategy
                 </Button>
               </div>
-            </section>
+            </div>
 
-            {/* Step 3: retrieve */}
-            <section className="space-y-3 border-t border-border pt-4">
-              <div className="flex items-start justify-between gap-2">
-                <StepHeading
-                  n={3}
-                  title="Columns to retrieve from lookup"
-                  hint="Click to select. These are added to your result."
-                />
-                <div className="flex flex-shrink-0 items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setRetrieveColumns([...lookupCols])}
-                    disabled={retrieveColumns.length === lookupCols.length}
-                  >
-                    Select all
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setRetrieveColumns([])}
-                    disabled={noRetrieve}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </div>
-              <div
-                className="flex flex-wrap gap-2"
-                role="group"
-                aria-label="Columns to retrieve"
-              >
-                {lookupCols.map((col) => {
-                  const on = retrieveColumns.includes(col);
-                  return (
-                    <Button
-                      key={col}
-                      type="button"
-                      variant={on ? "default" : "outline"}
-                      size="sm"
-                      aria-pressed={on}
-                      onClick={() => toggleRetrieve(col)}
-                    >
-                      {on && <Check className="mr-1 h-3.5 w-3.5" />}
-                      {col}
-                    </Button>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {retrieveColumns.length} of {lookupCols.length} selected
-              </p>
-            </section>
-
-            {/* Step 4: options */}
-            <section className="space-y-3 border-t border-border pt-4">
-              <StepHeading n={4} title="Matching options" />
-              <div className="grid gap-2 sm:grid-cols-3">
-                {options.map((o) => (
-                  <label
-                    key={o.id}
-                    className={`flex cursor-pointer items-start gap-2 rounded-md border p-2.5 transition-colors ${
-                      o.checked
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border hover:bg-muted/40"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={o.checked}
-                      onChange={(e) => o.set(e.target.checked)}
-                    />
-                    <span>
-                      <span className="block text-sm font-medium">
-                        {o.label}
-                      </span>
-                      <span className="block text-[11px] text-muted-foreground">
-                        {o.hint}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            {/* Run */}
-            <div className="space-y-2 border-t border-border pt-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={handleRun} disabled={!canRun}>
-                  {running ? "Running..." : "Run lookup"}
-                </Button>
-                {blocker && (
-                  <p className="text-xs text-muted-foreground">{blocker}</p>
-                )}
-              </div>
-              {diagnostics.length > 0 && (
-                <div
-                  role="status"
-                  className="rounded-md border border-border bg-muted/30 p-2.5 text-xs text-muted-foreground"
-                >
-                  <p className="mb-1 font-medium text-foreground">
-                    Notes from last run
-                  </p>
-                  <ul className="list-disc space-y-0.5 pl-4">
-                    {diagnostics.map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                </div>
+            <div>
+              <SectionLabel>Columns to Retrieve</SectionLabel>
+              <ColumnPicker
+                columns={lookupColumns}
+                selected={retrieve}
+                disabledColumns={collidingColumns}
+                onToggle={(col) => {
+                  clearStatus();
+                  setRetrieve((prev) => toggleIn(prev, col));
+                }}
+              />
+              {collidingColumns.length > 0 && (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Greyed-out columns already exist in the source table.
+                </p>
               )}
             </div>
+
+            <div>
+              <SectionLabel>Matching Options</SectionLabel>
+              <p className="mb-2 text-[11px] text-muted-foreground">
+                Keys use exact matching after the selected trim and case
+                normalization. Empty or missing key parts never match.
+                Text/number conversion and fuzzy matching are not supported.
+              </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                <OptionCheckbox
+                  label="Ignore case"
+                  checked={options.ignoreCase}
+                  onChange={(v) => {
+                    clearStatus();
+                    setOptions((o) => ({ ...o, ignoreCase: v }));
+                  }}
+                />
+                <OptionCheckbox
+                  label="Trim whitespace"
+                  checked={options.trim}
+                  onChange={(v) => {
+                    clearStatus();
+                    setOptions((o) => ({ ...o, trim: v }));
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Unmatched and ambiguous source rows are always retained.
+              </p>
+            </div>
+
+            <div>
+              <SectionLabel>Output columns</SectionLabel>
+              <p className="mb-1.5 text-[11px] text-muted-foreground">
+                Original source columns followed by selected lookup columns:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {[...sourceColumns, ...retrieve].map((column, index) => (
+                  <span
+                    key={`${column}-${index}`}
+                    className="max-w-full truncate rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                    title={column}
+                  >
+                    {column}
+                  </span>
+                ))}
+                {retrieve.length === 0 && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Select at least one lookup column to preview the output.
+                  </span>
+                )}
+              </div>
+            </div>
           </>
+        )}
+
+        <Button
+          type="button"
+          onClick={handleRun}
+          disabled={!canRun}
+          className="w-full"
+        >
+          Run Lookup
+        </Button>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {diagnostics && (
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {diagnostics.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {summary && recordDiagnostics && (
+          <div className="space-y-2 border-t border-border pt-3">
+            <div>
+              <SectionLabel>Execution summary</SectionLabel>
+              <p className="text-[11px] text-muted-foreground">
+                {summary.totalSourceRows} source rows · {summary.matchedCount}{" "}
+                matched · {summary.ambiguousCount} ambiguous ·{" "}
+                {summary.unmatchedCount} unmatched
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Output: {summary.outputRowCount} rows
+                {summary.rowCountPreserved
+                  ? " (source row count preserved)"
+                  : " (row count mismatch)"}
+              </p>
+            </div>
+            <ul className="space-y-1">
+              {summary.strategies.map((strategy) => (
+                <li
+                  key={strategy.strategyId}
+                  className="text-[10px] text-muted-foreground"
+                >
+                  {strategy.strategyName}: {strategy.matchedCount} matched,{" "}
+                  {strategy.ambiguousCount} ambiguous,{" "}
+                  {strategy.zeroCandidateCount} zero candidates
+                  {strategy.duplicateLookupKeyCount > 0 &&
+                    ` · ${strategy.duplicateLookupKeyCount} duplicate lookup keys`}
+                  {strategy.lookupRowsSkippedForInvalidKeys > 0 &&
+                    ` · ${strategy.lookupRowsSkippedForInvalidKeys} invalid lookup keys`}
+                </li>
+              ))}
+            </ul>
+            <details className="rounded-md border border-border p-2">
+              <summary className="cursor-pointer text-xs font-medium">
+                Inspect row diagnostics ({recordDiagnostics.length})
+              </summary>
+              <div className="mt-2 space-y-2">
+                <label className="block text-[10px] font-medium text-muted-foreground">
+                  Show
+                  <select
+                    className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                    value={diagnosticFilter}
+                    onChange={(event) => {
+                      setDiagnosticFilter(event.target.value);
+                      setDiagnosticLimit(100);
+                    }}
+                  >
+                    <option value="all">All records</option>
+                    <option value="matched">Matched</option>
+                    <option value="ambiguous">Ambiguous</option>
+                    <option value="unmatched">Unmatched</option>
+                    <option value="key-issues">Invalid or missing key parts</option>
+                  </select>
+                </label>
+                {(() => {
+                  const filtered = recordDiagnostics.filter((record) => {
+                    if (diagnosticFilter === "key-issues") {
+                      return record.attempts.some((attempt) => attempt.keyIssue);
+                    }
+                    return diagnosticFilter === "all" || record.status === diagnosticFilter;
+                  });
+                  const visible = filtered.slice(0, diagnosticLimit);
+                  return (
+                    <>
+                      <ul className="max-h-56 space-y-1.5 overflow-y-auto">
+                        {visible.map((record) => (
+                          <li
+                            key={record.sourceRowIndex}
+                            className="rounded border border-border bg-muted/20 p-1.5 text-[10px]"
+                          >
+                            <p className="font-medium text-foreground">
+                              Source row {record.sourceRowIndex} · {record.status}
+                              {record.strategyName
+                                ? ` · ${record.strategyName} (priority ${record.priority})`
+                                : ""}
+                            </p>
+                            <p className="text-muted-foreground">{record.reason}</p>
+                            {record.candidateCount > 0 && (
+                              <p className="text-muted-foreground">
+                                {record.candidateCount} candidate(s), lookup row
+                                references: {record.candidateRowIndices.join(", ")}
+                                {record.candidateReferencesTruncated
+                                  ? " (preview truncated)"
+                                  : ""}
+                              </p>
+                            )}
+                            {record.matchedLookupRowIndex !== null && (
+                              <p className="text-muted-foreground">
+                                Matched lookup row: {record.matchedLookupRowIndex}
+                              </p>
+                            )}
+                            {record.attempts.length > 1 && (
+                              <ul className="mt-1 border-l border-border pl-2 text-muted-foreground">
+                                {record.attempts.map((attempt) => (
+                                  <li key={attempt.strategyId}>
+                                    {attempt.strategyName}: {attempt.candidateCount}{" "}
+                                    candidate(s) — {attempt.reason}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {record.attempts.some((attempt) => attempt.keyIssue) && (
+                              <p className="text-destructive">
+                                {record.attempts
+                                  .filter((attempt) => attempt.keyIssue)
+                                  .map(
+                                    (attempt) =>
+                                      `${attempt.strategyName}: ${attempt.keyIssue}`,
+                                  )
+                                  .join(" ")}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-[10px] text-muted-foreground">
+                        Showing {visible.length} of {filtered.length} records.
+                      </p>
+                      {visible.length < filtered.length && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-full text-xs"
+                          onClick={() =>
+                            setDiagnosticLimit((limit) => limit + 100)
+                          }
+                        >
+                          Show next 100
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </details>
+          </div>
         )}
       </CardContent>
     </Card>

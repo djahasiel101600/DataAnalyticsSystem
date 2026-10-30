@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  Menu,
-  X,
-  Undo2,
+  Database,
+  Download,
   Eraser,
+  Menu,
+  ShieldCheck,
   Table2,
+  Undo2,
   Upload,
-  MousePointerClick,
-  SlidersHorizontal,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import { UploadZone } from "@/features/upload-datasets";
 import { DatasetList } from "@/widgets/dataset-list";
@@ -23,71 +25,72 @@ import { CollapsibleSection } from "@/shared/ui/collapsible";
 
 function Stat({ rows, cols }: { rows: number; cols: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span className="rounded-full bg-muted px-2 py-0.5 font-medium tabular-nums">
-        {rows.toLocaleString()} rows
+    <span className="inline-flex items-center gap-1.5">
+      <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Rows <span className="ml-1 tabular-nums text-foreground">{rows.toLocaleString()}</span>
       </span>
-      <span className="rounded-full bg-muted px-2 py-0.5 font-medium tabular-nums">
-        {cols.toLocaleString()} columns
+      <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Cols <span className="ml-1 tabular-nums text-foreground">{cols.toLocaleString()}</span>
       </span>
     </span>
   );
 }
 
-function GuideStep({
-  icon,
-  n,
+function RailSection({
   title,
-  text,
+  icon: Icon,
+  children,
 }: {
-  icon: React.ReactNode;
-  n: number;
   title: string;
-  text: string;
+  icon: LucideIcon;
+  children: ReactNode;
 }) {
   return (
-    <li className="flex gap-3 rounded-lg border border-border bg-card p-4 text-left">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-foreground">
-          <span className="text-muted-foreground mr-1">{n}.</span>
-          {title}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{text}</p>
-      </div>
-    </li>
+    <section className="space-y-2 border-b border-border px-3 py-3 last:border-b-0">
+      <h2 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <Icon className="h-3 w-3" />
+        {title}
+      </h2>
+      {children}
+    </section>
   );
 }
 
 export function MainPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer only
-  const { getDataset, result, setResult, resultHighlight, undo, canUndo } =
-    useDatasets();
-  const dataset = selectedId ? getDataset(selectedId) : null;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const {
+    datasets,
+    getDataset,
+    result,
+    setResult,
+    resultHighlight,
+    undo,
+    canUndo,
+  } = useDatasets();
+  const dataset = (selectedId ? getDataset(selectedId) : undefined) ?? datasets[0] ?? null;
 
-  // Ctrl/Cmd+Z to undo (ignored while typing in a field)
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (
-        !(e.ctrlKey || e.metaKey) ||
-        e.key.toLowerCase() !== "z" ||
-        e.shiftKey
-      )
+        !(event.ctrlKey || event.metaKey) ||
+        event.key.toLowerCase() !== "z" ||
+        event.shiftKey
+      ) {
         return;
-      const t = e.target as HTMLElement | null;
+      }
+      const target = event.target as HTMLElement | null;
       if (
-        t &&
-        (t.tagName === "INPUT" ||
-          t.tagName === "TEXTAREA" ||
-          t.tagName === "SELECT" ||
-          t.isContentEditable)
-      )
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
         return;
+      }
       if (canUndo) {
-        e.preventDefault();
+        event.preventDefault();
         undo();
       }
     };
@@ -95,241 +98,205 @@ export function MainPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [canUndo, undo]);
 
-  // Close the mobile drawer once a dataset is chosen
-  const handleSelect = (id: string | null) => {
+  const handleSelect = (id: string) => {
     setSelectedId(id);
     setSidebarOpen(false);
   };
 
   return (
-    <div className="h-dvh flex flex-row bg-background">
-      {/* Mobile backdrop */}
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      <header className="z-20 flex h-11 flex-none items-center gap-2.5 border-b border-border bg-card px-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 lg:hidden"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open workspace sidebar"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Database className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="truncate text-[13px] font-semibold leading-tight text-foreground">
+            Data Analytics
+          </h1>
+          <p className="hidden text-[10px] leading-tight text-muted-foreground sm:block">
+            Upload · clean · match · export
+          </p>
+        </div>
+        <div className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground sm:flex">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+          Your data stays in this browser
+        </div>
+      </header>
+
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        <button
+          type="button"
+          className="fixed inset-0 top-11 z-30 bg-black/35 lg:hidden"
           onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
+          aria-label="Close workspace sidebar"
         />
       )}
 
-      <aside
-        aria-label="Workspace sidebar"
-        className={[
-          "z-40 w-[300px] flex-shrink-0 flex flex-col border-r border-border bg-card overflow-hidden",
-          "fixed inset-y-0 left-0 transition-transform duration-200 md:static md:translate-x-0",
-          sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full",
-        ].join(" ")}
-      >
-        <header className="flex-shrink-0 flex items-start justify-between px-4 pt-4 pb-3 border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-primary">
-              Data Analytics
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Upload, process, export.
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden -mr-2"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Close sidebar"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </header>
-
-        <div
-          data-sidebar
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 flex flex-col gap-2"
+      <div className="flex min-h-0 flex-1">
+        <aside
+          aria-label="Workspace sidebar"
+          className={[
+            "fixed inset-y-11 left-0 z-40 flex w-[248px] flex-none -translate-x-full flex-col overflow-hidden border-r border-border bg-card transition-transform duration-200 lg:static lg:translate-x-0",
+            sidebarOpen ? "translate-x-0 shadow-xl" : "",
+          ].join(" ")}
         >
-          <CollapsibleSection title="Upload" defaultOpen={true}>
-            <UploadZone />
-          </CollapsibleSection>
-          <CollapsibleSection title="Datasets" defaultOpen={true}>
-            <DatasetList selectedId={selectedId} onSelect={handleSelect} />
-          </CollapsibleSection>
-          <CollapsibleSection title="Export" defaultOpen={false}>
-            <ExportButtons selectedDatasetId={selectedId} />
-          </CollapsibleSection>
-          <CollapsibleSection title="Saved results" defaultOpen={false}>
-            <SavedRecipesCard />
-          </CollapsibleSection>
-          <CollapsibleSection title="Recent session" defaultOpen={false}>
-            <RecentSessionCard />
-          </CollapsibleSection>
-        </div>
-      </aside>
-
-      <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
-        {/* Top bar: mobile menu + current context */}
-        <div className="flex-shrink-0 flex items-center gap-3 border-b border-border bg-card/60 px-4 py-2.5 md:px-6">
-          <Button
-            variant="outline"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <nav
-            aria-label="Current view"
-            className="flex min-w-0 items-center gap-2 text-sm"
-          >
-            <span className="text-muted-foreground">Dataset</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="truncate font-medium text-foreground">
-              {dataset ? dataset.name : "None selected"}
-            </span>
-            {result && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                  Result
-                </span>
-              </>
-            )}
-          </nav>
-        </div>
-
-        <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 gap-4 overflow-hidden">
-          {/* Operations: collapsible so the table can take the full height when needed */}
-          <section
-            className="flex-shrink-0 min-h-0 max-h-[42vh] overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-card/50"
-            aria-label="Operations"
-          >
-            <div className="p-3">
-              <CollapsibleSection title="Operations" defaultOpen={true}>
-                <OperationsPanel />
+          <div className="flex flex-none items-center justify-between border-b border-border px-3 py-2 lg:hidden">
+            <span className="text-xs font-semibold">Workspace</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <RailSection title="Add data" icon={Upload}>
+              <UploadZone />
+            </RailSection>
+            <RailSection title={`Datasets · ${datasets.length}`} icon={Database}>
+              <DatasetList
+                selectedId={dataset?.id ?? null}
+                onSelect={handleSelect}
+              />
+            </RailSection>
+            <RailSection title="Export" icon={Download}>
+              <ExportButtons selectedDatasetId={dataset?.id} />
+            </RailSection>
+            <RailSection title="Saved results" icon={Table2}>
+              <SavedRecipesCard />
+            </RailSection>
+            <div className="px-3 py-2">
+              <CollapsibleSection title="Recent session" defaultOpen={false}>
+                <RecentSessionCard />
               </CollapsibleSection>
             </div>
-          </section>
+          </div>
+          <div className="flex flex-none items-center gap-1.5 border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+            <ShieldCheck className="h-3 w-3 text-primary" />
+            Files stay in this browser.
+          </div>
+        </aside>
 
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
           <section
-            className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden"
-            aria-label="Data view"
+            aria-label="Data workspace"
             aria-live="polite"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
           >
-            {result ? (
-              <Card className="overflow-hidden flex-1 min-h-0 flex flex-col border-primary/30 shadow-md">
-                <CardHeader className="flex flex-col gap-3 py-3 flex-shrink-0 bg-primary/5 border-b border-border sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <CardTitle className="text-lg text-foreground">
-                      Result
-                    </CardTitle>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Stat
-                        rows={result.rows.length}
-                        cols={result.columns.length}
-                      />
-                      {dataset && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          Selected dataset: {dataset.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    {canUndo && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={undo}
-                        title="Undo last operation (Ctrl/Cmd+Z)"
-                      >
-                        <Undo2 className="mr-1.5 h-4 w-4" />
-                        Undo
-                      </Button>
-                    )}
+            {result && (
+              <div className="flex h-12 flex-none items-center justify-between gap-3 border-b border-border bg-card/60 px-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase text-muted-foreground">
+                    Result
+                  </span>
+                  <span className="truncate text-sm font-semibold">Processed data</span>
+                  <Stat rows={result.rows.length} cols={result.columns.length} />
+                </div>
+                <div className="flex flex-none items-center gap-1.5">
+                  {canUndo && (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                      onClick={() => setResult(null)}
-                      title="Discard the result and go back to the dataset"
+                      className="h-7 px-2 text-xs"
+                      onClick={undo}
+                      title="Undo last operation (Ctrl/Cmd+Z)"
                     >
-                      <Eraser className="mr-1.5 h-4 w-4" />
-                      Clear result
+                      <Undo2 className="mr-1 h-3.5 w-3.5" />
+                      Undo
                     </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="overflow-x-auto flex-1 min-h-0 pt-0">
-                  <DataTableView
-                    columns={result.columns}
-                    rows={result.rows}
-                    highlight={resultHighlight}
-                  />
-                </CardContent>
-              </Card>
-            ) : dataset ? (
-              <Card className="overflow-hidden flex-1 min-h-0 flex flex-col border-border shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between gap-4 py-3 flex-shrink-0 bg-muted/30 border-b border-border">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Table2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    <CardTitle className="truncate text-lg text-foreground">
-                      {dataset.name}
-                    </CardTitle>
-                  </div>
-                  <Stat
-                    rows={dataset.rows.length}
-                    cols={dataset.columns.length}
-                  />
-                </CardHeader>
-                <CardContent className="overflow-x-auto flex-1 min-h-0 pt-0">
-                  <DataTableView
-                    columns={dataset.columns}
-                    rows={dataset.rows}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="flex-1 min-h-0 flex flex-col">
-                <CardContent className="flex-1 flex flex-col items-center justify-center gap-6 py-8 overflow-y-auto">
-                  <div className="text-center">
-                    <h2 className="text-xl font-semibold text-foreground">
-                      Get started
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Three quick steps to analyze your data.
-                    </p>
-                  </div>
-                  <ol className="grid w-full max-w-3xl gap-3 sm:grid-cols-3">
-                    <GuideStep
-                      n={1}
-                      icon={<Upload className="h-4 w-4" />}
-                      title="Upload"
-                      text="Add CSV or Excel files from the sidebar."
-                    />
-                    <GuideStep
-                      n={2}
-                      icon={<MousePointerClick className="h-4 w-4" />}
-                      title="Select"
-                      text="Pick a dataset in the Datasets list to preview it."
-                    />
-                    <GuideStep
-                      n={3}
-                      icon={<SlidersHorizontal className="h-4 w-4" />}
-                      title="Process"
-                      text="Filter, merge, aggregate and more, then export."
-                    />
-                  </ol>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    className="md:hidden"
-                    onClick={() => setSidebarOpen(true)}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setResult(null)}
+                    title="Discard the result and go back to the dataset"
                   >
-                    <Menu className="mr-1.5 h-4 w-4" />
-                    Open sidebar
+                    <Eraser className="mr-1 h-3.5 w-3.5" />
+                    Clear
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
+
+            <div className="min-h-0 flex-1 p-2 sm:p-2">
+              {result ? (
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+                  <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
+                    <DataTableView
+                      columns={result.columns}
+                      rows={result.rows}
+                      highlight={resultHighlight}
+                    />
+                  </CardContent>
+                </Card>
+              ) : dataset ? (
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+                  <CardHeader className="flex flex-none flex-row items-center justify-between gap-3 border-b border-border px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Table2 className="h-4 w-4 flex-none text-muted-foreground" />
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase text-muted-foreground">
+                        Dataset
+                      </span>
+                      <CardTitle className="truncate text-sm">{dataset.name}</CardTitle>
+                    </div>
+                    <Stat rows={dataset.rows.length} cols={dataset.columns.length} />
+                  </CardHeader>
+                  <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
+                    <DataTableView
+                      columns={dataset.columns}
+                      rows={dataset.rows}
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="flex h-full min-h-0 flex-col items-center justify-center">
+                  <CardContent className="flex max-w-md flex-col items-center px-6 py-10 text-center">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Upload className="h-5 w-5" />
+                    </span>
+                    <h2 className="mt-4 text-base font-semibold">
+                      Bring your data into the workspace
+                    </h2>
+                    <p className="mt-1.5 text-sm text-muted-foreground">
+                      Upload a CSV or Excel file to preview it, run an operation,
+                      and export your results.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 lg:hidden"
+                      onClick={() => setSidebarOpen(true)}
+                    >
+                      <Upload className="mr-1.5 h-3.5 w-3.5" />
+                      Open upload panel
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </section>
-        </div>
-      </main>
+
+          <aside
+            aria-label="Data operations"
+            className="flex min-h-[38vh] max-h-[45vh] w-full flex-none flex-col overflow-hidden border-t border-border bg-card lg:min-h-0 lg:max-h-none lg:w-[320px] lg:border-l lg:border-t-0"
+          >
+            <OperationsPanel />
+          </aside>
+        </main>
+      </div>
     </div>
   );
 }

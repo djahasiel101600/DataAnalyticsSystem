@@ -10,7 +10,7 @@ export async function downloadXLSXServer(
   const body = JSON.stringify({
     columns,
     rows: rows.map((r) => {
-      const arr: (string | number)[] = []
+      const arr: (string | number | boolean)[] = []
       for (const c of columns) {
         arr.push(r[c] ?? '')
       }

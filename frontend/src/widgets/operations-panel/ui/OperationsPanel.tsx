@@ -1,74 +1,88 @@
-import { Fragment } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { DuplicateCheckForm } from '@/features/duplicate-check'
-import { LookupForm } from '@/features/lookup'
-import { FilterSortForm } from '@/features/filter-sort'
-import { RegexSearchForm } from '@/features/regex-search'
-import { MergeJoinForm } from '@/features/merge-join'
-import { AggregateForm } from '@/features/aggregate'
-import { AskAIForm } from '@/features/ai-analytics'
-import { CoverageCheckForm } from '@/features/coverage-check'
-import { InactivityCheckForm } from '@/features/inactivity-check'
-import { ExceptionReportForm } from '@/features/exception-report'
-import { CleanDataForm } from '@/features/clean-data'
-import { CompareDatasetsForm } from '@/features/compare-datasets'
+import {
+  ArrowLeftRight,
+  BarChart3,
+  Copy,
+  Eraser,
+  Filter,
+  GitCompare,
+  Layers,
+  Regex,
+  Search,
+  Sparkles,
+  Table2,
+  Timer,
+  type LucideIcon,
+} from "lucide-react";
+import { DuplicateCheckForm } from "@/features/duplicate-check";
+import { LookupForm } from "@/features/lookup";
+import { FilterSortForm } from "@/features/filter-sort";
+import { RegexSearchForm } from "@/features/regex-search";
+import { MergeJoinForm } from "@/features/merge-join";
+import { AggregateForm } from "@/features/aggregate";
+import { AskAIForm } from "@/features/ai-analytics";
+import { CoverageCheckForm } from "@/features/coverage-check";
+import { InactivityCheckForm } from "@/features/inactivity-check";
+import { ExceptionReportForm } from "@/features/exception-report";
+import { CleanDataForm } from "@/features/clean-data";
+import { CompareDatasetsForm } from "@/features/compare-datasets";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+
+interface Operation {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+  form: React.ReactNode;
+}
+
+const operations: Operation[] = [
+  { value: "duplicate", label: "Duplicates", icon: Copy, form: <DuplicateCheckForm /> },
+  { value: "lookup", label: "Lookup", icon: Search, form: <LookupForm /> },
+  { value: "filter", label: "Filter", icon: Filter, form: <FilterSortForm /> },
+  { value: "merge", label: "Merge", icon: Layers, form: <MergeJoinForm /> },
+  { value: "coverage", label: "Coverage", icon: Table2, form: <CoverageCheckForm /> },
+  { value: "inactivity", label: "Inactive", icon: Timer, form: <InactivityCheckForm /> },
+  { value: "exceptions", label: "Exceptions", icon: ArrowLeftRight, form: <ExceptionReportForm /> },
+  { value: "compare", label: "Compare", icon: GitCompare, form: <CompareDatasetsForm /> },
+  { value: "aggregate", label: "Aggregate", icon: BarChart3, form: <AggregateForm /> },
+  { value: "clean", label: "Clean", icon: Eraser, form: <CleanDataForm /> },
+  { value: "regex", label: "Regex", icon: Regex, form: <RegexSearchForm /> },
+  { value: "ai", label: "Ask AI", icon: Sparkles, form: <AskAIForm /> },
+];
 
 export function OperationsPanel() {
   return (
-    <Tabs defaultValue="duplicate" className="w-full min-w-0">
-      <Fragment>
-        <p className="text-xs font-medium text-muted-foreground mb-1.5">Operations</p>
-        <TabsList className="w-full flex overflow-x-auto overflow-y-hidden flex-nowrap gap-1 h-auto min-h-10 p-1.5 rounded-lg bg-muted/80 mb-2">
-          <TabsTrigger value="duplicate" className="flex-shrink-0 px-3 py-2 text-sm">Duplicate</TabsTrigger>
-          <TabsTrigger value="lookup" className="flex-shrink-0 px-3 py-2 text-sm">Lookup</TabsTrigger>
-          <TabsTrigger value="filter" className="flex-shrink-0 px-3 py-2 text-sm">Filter & sort</TabsTrigger>
-          <TabsTrigger value="regex" className="flex-shrink-0 px-3 py-2 text-sm">Regex</TabsTrigger>
-          <TabsTrigger value="merge" className="flex-shrink-0 px-3 py-2 text-sm">Merge</TabsTrigger>
-          <TabsTrigger value="coverage" className="flex-shrink-0 px-3 py-2 text-sm">Coverage</TabsTrigger>
-          <TabsTrigger value="inactivity" className="flex-shrink-0 px-3 py-2 text-sm">Inactivity</TabsTrigger>
-          <TabsTrigger value="exceptions" className="flex-shrink-0 px-3 py-2 text-sm">Exceptions</TabsTrigger>
-          <TabsTrigger value="clean" className="flex-shrink-0 px-3 py-2 text-sm">Clean</TabsTrigger>
-          <TabsTrigger value="compare" className="flex-shrink-0 px-3 py-2 text-sm">Compare</TabsTrigger>
-          <TabsTrigger value="aggregate" className="flex-shrink-0 px-3 py-2 text-sm">Aggregate</TabsTrigger>
-          <TabsTrigger value="ai" className="flex-shrink-0 px-3 py-2 text-sm">Ask AI</TabsTrigger>
+    <Tabs
+      defaultValue="duplicate"
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div className="flex-none border-b border-border px-2 py-2">
+        <TabsList
+          aria-label="Choose an operation"
+          className="grid w-full grid-cols-4 gap-1 border-0 bg-transparent p-0"
+        >
+          {operations.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="h-10 flex-col gap-1 rounded-md border border-transparent px-1 py-1 text-[10px] leading-none data-[state=active]:border-primary/30 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="max-w-full truncate">{label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
-      </Fragment>
-      <TabsContent value="duplicate" className="mt-0 focus-visible:outline-none">
-        <DuplicateCheckForm />
-      </TabsContent>
-      <TabsContent value="lookup" className="mt-0 focus-visible:outline-none">
-        <LookupForm />
-      </TabsContent>
-      <TabsContent value="filter" className="mt-0 focus-visible:outline-none">
-        <FilterSortForm />
-      </TabsContent>
-      <TabsContent value="regex" className="mt-0 focus-visible:outline-none">
-        <RegexSearchForm />
-      </TabsContent>
-      <TabsContent value="merge" className="mt-0 focus-visible:outline-none">
-        <MergeJoinForm />
-      </TabsContent>
-      <TabsContent value="coverage" className="mt-0 focus-visible:outline-none">
-        <CoverageCheckForm />
-      </TabsContent>
-      <TabsContent value="inactivity" className="mt-0 focus-visible:outline-none">
-        <InactivityCheckForm />
-      </TabsContent>
-      <TabsContent value="exceptions" className="mt-0 focus-visible:outline-none">
-        <ExceptionReportForm />
-      </TabsContent>
-      <TabsContent value="clean" className="mt-0 focus-visible:outline-none">
-        <CleanDataForm />
-      </TabsContent>
-      <TabsContent value="compare" className="mt-0 focus-visible:outline-none">
-        <CompareDatasetsForm />
-      </TabsContent>
-      <TabsContent value="aggregate" className="mt-0 focus-visible:outline-none">
-        <AggregateForm />
-      </TabsContent>
-      <TabsContent value="ai" className="mt-0 focus-visible:outline-none">
-        <AskAIForm />
-      </TabsContent>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        {operations.map(({ value, form }) => (
+          <TabsContent
+            key={value}
+            value={value}
+            className="mt-0 focus-visible:outline-none"
+          >
+            {form}
+          </TabsContent>
+        ))}
+      </div>
     </Tabs>
-  )
+  );
 }

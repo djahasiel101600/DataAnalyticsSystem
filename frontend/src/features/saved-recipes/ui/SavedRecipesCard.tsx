@@ -4,7 +4,6 @@ import { listRecipeNames, saveRecipe, loadRecipe, deleteRecipe } from '../lib/re
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 
 export function SavedRecipesCard() {
   const { result, setResult } = useDatasets()
@@ -41,50 +40,55 @@ export function SavedRecipesCard() {
   }
 
   return (
-    <Card className="border-0 shadow-none bg-transparent">
-      <CardHeader className="p-0 pb-2">
-        <CardTitle className="text-sm font-medium">Saved results</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 space-y-3">
-        <div>
-          <Label>Save current result as</Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              value={saveName}
-              onChange={(e) => setSaveName(e.target.value)}
-              placeholder="Recipe name"
-            />
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={!result || result.rows.length === 0 || !saveName.trim() || loading}
-            >
-              Save
-            </Button>
-          </div>
+    <div className="space-y-2.5">
+      <div>
+        <Label className="text-[11px] text-muted-foreground">Save current result as</Label>
+        <div className="mt-1 flex gap-1.5">
+          <Input
+            className="h-8 min-w-0 text-xs"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            placeholder="Name this result"
+          />
+          <Button
+            size="sm"
+            className="h-8 px-2 text-xs"
+            onClick={handleSave}
+            disabled={!result || result.rows.length === 0 || !saveName.trim() || loading}
+          >
+            Save
+          </Button>
         </div>
-        {names.length > 0 && (
-          <div>
-            <Label>Load saved</Label>
-            <ul className="mt-1 space-y-1">
-              {names.map((name) => (
-                <li key={name} className="flex items-center justify-between gap-2 text-sm">
-                  <button
-                    type="button"
-                    className="text-left hover:underline truncate"
-                    onClick={() => handleLoad(name)}
-                  >
-                    {name}
-                  </button>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(name)}>
-                    ×
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      {names.length > 0 ? (
+        <ul className="space-y-0.5">
+          {names.map((name) => (
+            <li key={name} className="flex items-center justify-between gap-2 text-xs">
+              <button
+                type="button"
+                className="min-w-0 truncate text-left text-muted-foreground hover:text-foreground hover:underline"
+                onClick={() => handleLoad(name)}
+              >
+                {name}
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 flex-none"
+                onClick={() => handleDelete(name)}
+                aria-label={`Delete saved result ${name}`}
+              >
+                ×
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Run an operation, then save the result here.
+        </p>
+      )}
+    </div>
   )
 }

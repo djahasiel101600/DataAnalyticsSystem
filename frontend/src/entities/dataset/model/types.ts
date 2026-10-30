@@ -1,7 +1,7 @@
 /**
- * Normalized row: all values as string or number for display/export.
+ * Normalized row values used by imported datasets and lookup operations.
  */
-export type DataRow = Record<string, string | number>
+export type DataRow = Record<string, string | number | boolean | null>
 
 export interface Dataset {
   id: string

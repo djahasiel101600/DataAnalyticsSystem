@@ -5,7 +5,6 @@ import { downloadXLSX } from '../lib/export-xlsx'
 import { downloadXLSXServer, shouldUseServerXLSX } from '../lib/export-xlsx-server'
 import { downloadJSON } from '../lib/export-json'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 
 interface ExportButtonsProps {
   selectedDatasetId?: string | null
@@ -51,36 +50,33 @@ export function ExportButtons({ selectedDatasetId }: ExportButtonsProps) {
     }
   }
 
-  return (
-    <Card className="border-0 shadow-none bg-transparent">
-      <CardHeader className="p-0 pb-2">
-        <CardTitle className="text-sm font-medium">Export</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {hasExport ? (
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportXLSX} disabled={exporting}>
-                {exporting ? 'Exporting...' : 'Excel'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportJSON}>
-                JSON
-              </Button>
-            </div>
-            {exportData.rows.length > 15000 && (
-              <p className="text-xs text-muted-foreground">Excel uses server for large data.</p>
-            )}
-            {error && <p className="text-xs text-destructive">{error}</p>}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            {dataset ? `Select "Export as CSV/Excel" to export "${dataset.name}".` : 'Select a dataset or run an operation to export.'}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+  return hasExport ? (
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={handleExportCSV}>
+          CSV
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 text-xs"
+          onClick={handleExportXLSX}
+          disabled={exporting}
+        >
+          {exporting ? 'Exporting...' : 'Excel'}
+        </Button>
+        <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={handleExportJSON}>
+          JSON
+        </Button>
+      </div>
+      {exportData.rows.length > 15000 && (
+        <p className="text-[11px] text-muted-foreground">Excel uses server for large data.</p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  ) : (
+    <p className="text-[11px] leading-snug text-muted-foreground">
+      {dataset ? `Ready to export ${dataset.name}.` : 'Select a dataset or run an operation to export.'}
+    </p>
   )
 }

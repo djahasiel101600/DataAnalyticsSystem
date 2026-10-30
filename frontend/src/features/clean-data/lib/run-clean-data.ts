@@ -27,10 +27,11 @@ export interface CleanDataOptions {
 }
 
 function cleanCell(
-  value: string | number,
+  value: string | number | boolean | null,
   opts: { trim?: boolean; lowercase?: boolean; uppercase?: boolean; fillEmpty?: string }
-): string | number {
+): string | number | boolean {
   if (typeof value === 'number' && !Number.isNaN(value)) return value
+  if (typeof value === 'boolean') return value
   let s = String(value ?? '')
   if (opts.trim) s = s.trim()
   if (opts.fillEmpty !== undefined && s === '') return opts.fillEmpty
@@ -68,7 +69,7 @@ export function runCleanData(dataset: Dataset, options: CleanDataOptions = {}): 
     for (const col of columnsToClean) {
       if (!(col in out)) continue
       const v = out[col]
-      let result: string | number
+      let result: string | number | boolean
       const std = stdByCol.get(col)
       if (std) {
         const s = String(v ?? '').trim()
@@ -82,7 +83,7 @@ export function runCleanData(dataset: Dataset, options: CleanDataOptions = {}): 
         }
       } else {
         result = cleanCell(
-          v as string | number,
+          v,
           { trim, lowercase, uppercase, fillEmpty }
         )
       }
