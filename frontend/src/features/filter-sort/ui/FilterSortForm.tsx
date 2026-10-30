@@ -128,8 +128,8 @@ export function FilterSortForm() {
               </Select>
             </div>
             {conditions.map((cond, i) => (
-              <div key={i} className="flex flex-wrap items-end gap-2 rounded border p-2">
-                <div className="flex-1 min-w-[80px]">
+              <div key={i} className="flex min-w-0 flex-wrap items-end gap-2 rounded border p-2">
+                <div className="min-w-0 flex-[1_1_100%]">
                   <Label className="text-xs">Column</Label>
                   <Select
                     value={cond.column}
@@ -143,7 +143,7 @@ export function FilterSortForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-[120px]">
+                <div className="min-w-0 flex-[1_1_7rem]">
                   <Label className="text-xs">Operator</Label>
                   <Select
                     value={cond.operator}
@@ -159,7 +159,7 @@ export function FilterSortForm() {
                 </div>
                 {['equals', 'contains', 'gt', 'gte', 'lt', 'lte'].includes(cond.operator) && (
                   <>
-                    <div className="w-[90px]">
+                    <div className="min-w-0 flex-[1_1_5rem]">
                       <Label className="text-xs">Type</Label>
                       <Select
                         value={cond.valueType ?? 'text'}
@@ -173,7 +173,7 @@ export function FilterSortForm() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-[100px]">
+                    <div className="min-w-0 flex-[1_1_6rem]">
                       <Label className="text-xs">Value</Label>
                       <Input
                         value={cond.value}
@@ -183,7 +183,7 @@ export function FilterSortForm() {
                     </div>
                   </>
                 )}
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeCondition(i)}>×</Button>
+                <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => removeCondition(i)}>×</Button>
               </div>
             ))}
             <Button type="button" variant="outline" size="sm" onClick={addCondition}>
@@ -193,12 +193,12 @@ export function FilterSortForm() {
             <div>
               <Label>Sort by (multi-column)</Label>
               {sortSpecs.map((spec, i) => (
-                <div key={i} className="flex flex-wrap items-end gap-2 mt-1">
+                <div key={i} className="flex min-w-0 flex-wrap items-end gap-2 mt-1">
                   <Select
                     value={spec.column}
                     onValueChange={(v) => updateSort(i, { column: v })}
                   >
-                    <SelectTrigger className="w-[140px]"><SelectValue placeholder="Column" /></SelectTrigger>
+                    <SelectTrigger className="min-w-0 flex-[1_1_8rem]"><SelectValue placeholder="Column" /></SelectTrigger>
                     <SelectContent>
                       {columns.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -209,13 +209,13 @@ export function FilterSortForm() {
                     value={spec.direction}
                     onValueChange={(v) => updateSort(i, { direction: v as SortDirection })}
                   >
-                    <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="min-w-0 flex-[1_1_6rem]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="asc">Ascending</SelectItem>
                       <SelectItem value="desc">Descending</SelectItem>
                     </SelectContent>
                   </Select>
-                  <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                  <label className="flex shrink-0 items-center gap-1 text-xs whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={!!spec.asDate}

@@ -139,7 +139,7 @@ function KeyPairEditor({
           key={i}
           className="rounded-lg border border-border bg-muted/25 p-2"
         >
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <OptionSelect
               value={pair.sourceColumn}
               onChange={(v) => update(i, { sourceColumn: v })}
@@ -632,7 +632,7 @@ export function LookupForm() {
                   const visible = filtered.slice(0, diagnosticLimit);
                   return (
                     <>
-                      <ul className="max-h-56 space-y-1.5 overflow-y-auto">
+                      <ul className="space-y-1.5">
                         {visible.map((record) => (
                           <li
                             key={record.sourceRowIndex}

@@ -101,6 +101,8 @@ export function MergeJoinForm() {
                   type="button"
                   variant={leftKeyColumns.includes(c) ? 'default' : 'outline'}
                   size="sm"
+                  className="max-w-full min-w-0 truncate"
+                  title={c}
                   onClick={() => toggleLeftKey(c)}
                 >
                   {c}
@@ -132,6 +134,8 @@ export function MergeJoinForm() {
                   type="button"
                   variant={rightKeyColumns.includes(c) ? 'default' : 'outline'}
                   size="sm"
+                  className="max-w-full min-w-0 truncate"
+                  title={c}
                   onClick={() => toggleRightKey(c)}
                 >
                   {c}

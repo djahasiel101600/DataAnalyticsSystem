@@ -104,6 +104,8 @@ export function RegexSearchForm() {
                 type="button"
                 variant={selectedIds.includes(d.id) ? 'default' : 'outline'}
                 size="sm"
+                className="max-w-full min-w-0 truncate"
+                title={d.name}
                 onClick={() => toggleDataset(d.id)}
               >
                 {d.name}
@@ -134,6 +136,8 @@ export function RegexSearchForm() {
                       type="button"
                       variant={(columnsByDs[d.id] ?? []).includes(col) ? 'default' : 'outline'}
                       size="sm"
+                      className="max-w-full min-w-0 truncate"
+                      title={col}
                       onClick={() => toggleColumn(d.id, col)}
                     >
                       {col}

@@ -112,6 +112,8 @@ export function CleanDataForm() {
                     type="button"
                     variant={selectedColumns.includes(col) ? 'default' : 'outline'}
                     size="sm"
+                    className="max-w-full min-w-0 truncate"
+                    title={col}
                     onClick={() => toggleColumn(col)}
                   >
                     {col}

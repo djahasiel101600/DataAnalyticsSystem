@@ -77,3 +77,12 @@
   padding-top: 0 !important;
 }
 
+[data-operations-panel] > [role="tabpanel"] > div > .rounded-lg.border > div {
+  padding: 0.5rem 0.75rem;
+}
+[data-operations-panel] > [role="tabpanel"] > div > .rounded-lg.border > div:first-child {
+  padding-top: 0.75rem;
+}
+[data-operations-panel] > [role="tabpanel"] > div > .rounded-lg.border > div.pt-0 {
+  padding-top: 0;
+}

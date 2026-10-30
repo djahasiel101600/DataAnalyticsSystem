@@ -133,6 +133,8 @@ export function AggregateForm() {
                         type="button"
                         variant={groupBy.includes(c) ? 'default' : 'outline'}
                         size="sm"
+                        className="max-w-full min-w-0 truncate"
+                        title={c}
                         onClick={() => toggleGroup(c)}
                       >
                         {c}
@@ -143,12 +145,12 @@ export function AggregateForm() {
                 <div>
                   <Label>Aggregates</Label>
                   {aggregates.map((agg, i) => (
-                    <div key={i} className="flex flex-wrap items-center gap-2 mt-1">
+                    <div key={i} className="flex min-w-0 flex-wrap items-center gap-2 mt-1">
                       <Select
                         value={agg.column}
                         onValueChange={(v) => updateAggregate(i, { column: v })}
                       >
-                        <SelectTrigger className="w-[120px]"><SelectValue placeholder="Column" /></SelectTrigger>
+                        <SelectTrigger className="min-w-0 flex-[1_1_8rem]"><SelectValue placeholder="Column" /></SelectTrigger>
                         <SelectContent>
                           {columns.map((c) => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -159,7 +161,7 @@ export function AggregateForm() {
                         value={agg.fn}
                         onValueChange={(v) => updateAggregate(i, { fn: v as AggregateFn })}
                       >
-                        <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="min-w-0 flex-[1_1_6rem]"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {AGG_FNS.map((f) => (
                             <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>

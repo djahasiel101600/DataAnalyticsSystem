@@ -137,6 +137,8 @@ export function CoverageCheckForm() {
                     type="button"
                     variant={primaryKeyColumns.includes(col) ? 'default' : 'outline'}
                     size="sm"
+                    className="max-w-full min-w-0 truncate"
+                    title={col}
                     onClick={() => togglePrimaryKey(col)}
                   >
                     {col}
@@ -159,6 +161,8 @@ export function CoverageCheckForm() {
                       type="button"
                       variant={selected ? 'default' : 'outline'}
                       size="sm"
+                      className="max-w-full min-w-0 truncate"
+                      title={d.name}
                       onClick={() => toggleRef(d.id)}
                     >
                       {d.name}
@@ -179,7 +183,7 @@ export function CoverageCheckForm() {
                   if (!ds) return null
                   return (
                     <div key={r.datasetId} className="rounded-md border border-border p-2">
-                      <p className="text-sm font-medium">{ds.name}</p>
+                      <p className="break-words text-sm font-medium">{ds.name}</p>
                       <p className="text-xs text-muted-foreground mb-1">
                         Choose key columns in this reference (same order/meaning as primary keys).
                       </p>
@@ -190,6 +194,8 @@ export function CoverageCheckForm() {
                             type="button"
                             variant={r.keyColumns.includes(c) ? 'default' : 'outline'}
                             size="sm"
+                            className="max-w-full min-w-0 truncate"
+                            title={c}
                             onClick={() => updateRefKeys(r.datasetId, c)}
                           >
                             {c}
@@ -257,4 +263,3 @@ export function CoverageCheckForm() {
     </Card>
   )
 }
-

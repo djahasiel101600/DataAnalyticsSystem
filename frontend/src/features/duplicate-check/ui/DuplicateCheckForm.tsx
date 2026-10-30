@@ -210,6 +210,8 @@ export function DuplicateCheckForm() {
                     type="button"
                     variant={keyColumns.includes(col) ? 'default' : 'outline'}
                     size="sm"
+                    className="max-w-full min-w-0 truncate"
+                    title={col}
                     onClick={() => toggleColumn(col)}
                   >
                     {col}
