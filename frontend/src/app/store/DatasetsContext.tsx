@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { Dataset, DataRow } from '@/entities/dataset'
+import {
+  createTableWorkspace,
+  type TableWorkspace,
+} from './table-workspace'
 
 export interface ResultHighlight {
   pattern: string
@@ -13,6 +17,7 @@ interface DatasetsState {
   result: { columns: string[]; rows: DataRow[] } | null
   resultHighlight: ResultHighlight | null
   resultHistory: { columns: string[]; rows: DataRow[] }[]
+  tableWorkspaces: Record<string, TableWorkspace>
 }
 
 interface DatasetsContextValue extends DatasetsState {
@@ -24,6 +29,12 @@ interface DatasetsContextValue extends DatasetsState {
   undo: () => void
   canUndo: boolean
   loadSession: (datasets: Dataset[], result: { columns: string[]; rows: DataRow[] } | null) => void
+  ensureTableWorkspace: (key: string, rows: DataRow[]) => void
+  updateTableWorkspace: (
+    key: string,
+    rows: DataRow[],
+    updater: (workspace: TableWorkspace) => TableWorkspace,
+  ) => void
 }
 
 const DatasetsContext = createContext<DatasetsContextValue | null>(null)
@@ -39,7 +50,32 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
     result: null,
     resultHighlight: null,
     resultHistory: [],
+    tableWorkspaces: {},
   })
+
+  useEffect(() => {
+    const hasPendingChanges = Object.values(state.tableWorkspaces).some((workspace) => {
+      if (workspace.records.length !== workspace.baseRows.length) return true
+      if (
+        Object.values(workspace.rowAnnotations).some((notes) => notes.length > 0) ||
+        Object.values(workspace.cellAnnotations).some((notes) => notes.length > 0)
+      ) {
+        return true
+      }
+      return workspace.records.some((record) =>
+        Object.keys(record.originalRow).some(
+          (column) => !Object.is(record.originalRow[column], record.row[column]),
+        ),
+      )
+    })
+    if (!hasPendingChanges) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [state.tableWorkspaces])
 
   const addDataset = useCallback((name: string, columns: string[], rows: DataRow[]): Dataset => {
     const id = generateId()
@@ -56,6 +92,9 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
       ...s,
       datasets: s.datasets.filter((d) => d.id !== id),
       result: s.result,
+      tableWorkspaces: Object.fromEntries(
+        Object.entries(s.tableWorkspaces).filter(([key]) => key !== `dataset:${id}`),
+      ),
     }))
   }, [])
 
@@ -95,12 +134,49 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
 
   const canUndo = state.resultHistory.length > 0
 
+  const ensureTableWorkspace = useCallback((key: string, rows: DataRow[]) => {
+    setState((s) => {
+      if (s.tableWorkspaces[key]?.baseRows === rows) return s
+      return {
+        ...s,
+        tableWorkspaces: {
+          ...s.tableWorkspaces,
+          [key]: createTableWorkspace(rows),
+        },
+      }
+    })
+  }, [])
+
+  const updateTableWorkspace = useCallback(
+    (
+      key: string,
+      rows: DataRow[],
+      updater: (workspace: TableWorkspace) => TableWorkspace,
+    ) => {
+      setState((s) => {
+        const current =
+          s.tableWorkspaces[key]?.baseRows === rows
+            ? s.tableWorkspaces[key]
+            : createTableWorkspace(rows)
+        return {
+          ...s,
+          tableWorkspaces: {
+            ...s.tableWorkspaces,
+            [key]: updater(current),
+          },
+        }
+      })
+    },
+    [],
+  )
+
   const loadSession = useCallback((datasets: Dataset[], result: { columns: string[]; rows: DataRow[] } | null) => {
     setState({
       datasets,
       result,
       resultHighlight: null,
       resultHistory: [],
+      tableWorkspaces: {},
     })
   }, [])
 
@@ -119,6 +195,8 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
     undo,
     canUndo,
     loadSession,
+    ensureTableWorkspace,
+    updateTableWorkspace,
   }
 
   return (

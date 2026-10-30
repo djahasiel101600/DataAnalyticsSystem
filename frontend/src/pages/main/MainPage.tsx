@@ -238,6 +238,7 @@ export function MainPage() {
                     <DataTableView
                       columns={result.columns}
                       rows={result.rows}
+                      workspaceKey="result"
                       highlight={resultHighlight}
                     />
                   </CardContent>
@@ -258,6 +259,7 @@ export function MainPage() {
                     <DataTableView
                       columns={dataset.columns}
                       rows={dataset.rows}
+                      workspaceKey={`dataset:${dataset.id}`}
                     />
                   </CardContent>
                 </Card>
