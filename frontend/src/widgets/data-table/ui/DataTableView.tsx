@@ -61,6 +61,103 @@ interface AnnotationTarget {
   column?: string;
 }
 
+interface AnnotationPanelProps {
+  heading: string;
+  notes: TableAnnotation[];
+  onSave: (noteId: string | null, text: string) => void;
+  onDelete: (noteId: string) => void;
+  onClose: () => void;
+}
+
+function AnnotationPanel({
+  heading,
+  notes,
+  onSave,
+  onDelete,
+  onClose,
+}: AnnotationPanelProps) {
+  const [draft, setDraft] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+
+  const save = () => {
+    if (!draft.trim()) return;
+    onSave(editingNoteId, draft.trim());
+    setDraft("");
+    setEditingNoteId(null);
+  };
+
+  return (
+    <div className="flex max-h-48 flex-none flex-col gap-2 overflow-auto border-b border-border bg-muted/20 p-3">
+      <div className="flex items-center justify-between">
+        <strong>{heading}</strong>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-[10px]"
+          onClick={onClose}
+        >
+          Close
+        </Button>
+      </div>
+      <ul className="space-y-1">
+        {notes.map((note) => (
+          <li key={note.id} className="flex items-start gap-2">
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left"
+              onClick={() => {
+                setEditingNoteId(note.id);
+                setDraft(note.text);
+              }}
+              title="Click to edit"
+            >
+              {note.text}
+              <span className="ml-2 text-[9px] text-muted-foreground">
+                {new Date(note.updatedAt).toLocaleString()}
+              </span>
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[10px] text-destructive"
+              onClick={() => {
+                onDelete(note.id);
+                if (editingNoteId === note.id) {
+                  setEditingNoteId(null);
+                  setDraft("");
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-2">
+        <input
+          className="h-7 min-w-0 flex-1 rounded border border-input bg-background px-2"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Add a note or select one above to edit"
+          aria-label="Annotation text"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") save();
+            if (event.key === "Escape") onClose();
+          }}
+        />
+        <Button
+          size="sm"
+          className="h-7 px-2 text-[10px]"
+          disabled={!draft.trim()}
+          onClick={save}
+        >
+          {editingNoteId ? "Save note" : "Add note"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function isEmpty(value: unknown): boolean {
   return value === "" || value === null || value === undefined;
 }
@@ -147,10 +244,6 @@ export function DataTableView({
   const [bulkValue, setBulkValue] = useState("");
   const [annotationTarget, setAnnotationTarget] =
     useState<AnnotationTarget | null>(null);
-  const [annotationDraft, setAnnotationDraft] = useState("");
-  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
-    null,
-  );
   const [exportFormat, setExportFormat] = useState<"csv" | "json" | "xlsx">(
     "csv",
   );
@@ -396,25 +489,23 @@ export function DataTableView({
 
   const openAnnotations = (target: AnnotationTarget) => {
     setAnnotationTarget(target);
-    setEditingAnnotationId(null);
-    setAnnotationDraft("");
   };
 
-  const saveAnnotation = () => {
-    if (!annotationTarget || !annotationDraft.trim()) return;
+  const saveAnnotation = (noteId: string | null, text: string) => {
+    if (!annotationTarget || !text.trim()) return;
     const before = annotationsFor(workspace, annotationTarget);
-    const existing = before.find((note) => note.id === editingAnnotationId);
+    const existing = before.find((note) => note.id === noteId);
     const after = existing
       ? before.map((note) =>
           note.id === existing.id
             ? {
                 ...note,
-                text: annotationDraft.trim(),
+                text: text.trim(),
                 updatedAt: new Date().toISOString(),
               }
             : note,
         )
-      : [...before, createAnnotation(annotationDraft.trim())];
+      : [...before, createAnnotation(text.trim())];
     commit(
       createAnnotationCommand(
         annotationTarget.column === undefined
@@ -429,8 +520,6 @@ export function DataTableView({
         after,
       ),
     );
-    setAnnotationDraft("");
-    setEditingAnnotationId(null);
   };
 
   const removeAnnotation = (noteId: string) => {
@@ -448,10 +537,6 @@ export function DataTableView({
         before.filter((note) => note.id !== noteId),
       ),
     );
-    if (editingAnnotationId === noteId) {
-      setEditingAnnotationId(null);
-      setAnnotationDraft("");
-    }
   };
 
   const exportSelected = () => {
@@ -911,72 +996,18 @@ export function DataTableView({
       )}
 
       {annotationTarget && (
-        <div className="flex max-h-48 flex-none flex-col gap-2 overflow-auto border-b border-border bg-muted/20 p-3">
-          <div className="flex items-center justify-between">
-            <strong>
-              {annotationTarget.column
-                ? `Cell notes · ${annotationTarget.column}`
-                : "Row notes"}
-            </strong>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-[10px]"
-              onClick={() => setAnnotationTarget(null)}
-            >
-              Close
-            </Button>
-          </div>
-          <ul className="space-y-1">
-            {annotationsFor(workspace, annotationTarget).map((note) => (
-              <li key={note.id} className="flex items-start gap-2">
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() => {
-                    setEditingAnnotationId(note.id);
-                    setAnnotationDraft(note.text);
-                  }}
-                  title="Click to edit"
-                >
-                  {note.text}
-                  <span className="ml-2 text-[9px] text-muted-foreground">
-                    {new Date(note.updatedAt).toLocaleString()}
-                  </span>
-                </button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-[10px] text-destructive"
-                  onClick={() => removeAnnotation(note.id)}
-                >
-                  Delete
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2">
-            <input
-              className="h-7 min-w-0 flex-1 rounded border border-input bg-background px-2"
-              value={annotationDraft}
-              onChange={(event) => setAnnotationDraft(event.target.value)}
-              placeholder="Add a note or select one above to edit"
-              aria-label="Annotation text"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") saveAnnotation();
-                if (event.key === "Escape") setAnnotationTarget(null);
-              }}
-            />
-            <Button
-              size="sm"
-              className="h-7 px-2 text-[10px]"
-              disabled={!annotationDraft.trim()}
-              onClick={saveAnnotation}
-            >
-              {editingAnnotationId ? "Save note" : "Add note"}
-            </Button>
-          </div>
-        </div>
+        <AnnotationPanel
+          key={JSON.stringify([annotationTarget.recordId, annotationTarget.column])}
+          heading={
+            annotationTarget.column
+              ? `Cell notes · ${annotationTarget.column}`
+              : "Row notes"
+          }
+          notes={annotationsFor(workspace, annotationTarget)}
+          onSave={saveAnnotation}
+          onDelete={removeAnnotation}
+          onClose={() => setAnnotationTarget(null)}
+        />
       )}
 
       <div className="min-h-0 min-w-0 flex-1 overflow-auto">

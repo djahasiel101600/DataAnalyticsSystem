@@ -11,32 +11,65 @@ export function RecentSessionCard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setHasSession(hasSavedSession())
+    let active = true
+    hasSavedSession()
+      .then((exists) => {
+        if (active) setHasSession(exists)
+      })
+      .catch((cause: unknown) => {
+        if (active) {
+          setError(cause instanceof Error ? cause.message : 'Could not check for a saved session.')
+        }
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true)
     setError(null)
-    const ok = saveSession({ datasets, result })
-    setSaving(false)
-    if (ok) setHasSession(true)
-    else setError('Session too large to save (max 2MB)')
+    try {
+      await saveSession({ datasets, result })
+      setHasSession(true)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save the session.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleRestore = () => {
-    const session = loadSession()
-    if (session) {
+  const handleRestore = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const session = await loadSession()
+      if (!session) {
+        setHasSession(false)
+        return
+      }
       const result = session.result
         ? { columns: session.result.columns, rows: session.result.rows as DataRow[] }
         : null
       applySession(session.datasets, result)
-      setError(null)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not restore the saved session.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleClear = () => {
-    clearSavedSession()
-    setHasSession(false)
+  const handleClear = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      await clearSavedSession()
+      setHasSession(false)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not clear the saved session.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -47,10 +80,10 @@ export function RecentSessionCard() {
         </Button>
         {hasSession && (
           <>
-            <Button size="sm" className="h-7 text-xs" onClick={handleRestore}>
-              Restore
+            <Button size="sm" className="h-7 text-xs" onClick={handleRestore} disabled={saving}>
+              {saving ? 'Working…' : 'Restore'}
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleClear}>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleClear} disabled={saving}>
               Clear saved
             </Button>
           </>
