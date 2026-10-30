@@ -16,7 +16,7 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
   const cell = row[c.column]
   const str = cell === null || cell === undefined ? '' : String(cell)
   const num = typeof cell === 'number' ? cell : Number(str)
-  const isEmpty = str === '' || str === null || str === undefined
+  const isEmpty = str === '' || cell === null || cell === undefined
   const valueType = c.valueType ?? 'text'
 
   if (c.operator === 'not_empty') return !isEmpty
@@ -25,13 +25,13 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
   if (valueType === 'date') {
     const cellTime = parseDate(cell)
     const valueTime = parseDate(c.value)
-    if (Number.isNaN(cellTime) || Number.isNaN(valueTime)) {
-      if (c.operator === 'equals') return false
-      return false
-    }
+    // If either side can't be parsed as a date, no date comparison can succeed.
+    if (Number.isNaN(cellTime) || Number.isNaN(valueTime)) return false
     switch (c.operator) {
       case 'equals':
-        return cellTime === valueTime
+        // Compare calendar-day equality, ignoring time-of-day, so that a
+        // date-only input (e.g. "2025-03-18") matches timestamps on that day.
+        return dayStart(cellTime) === dayStart(valueTime)
       case 'gt':
         return cellTime > valueTime
       case 'gte':
@@ -40,10 +40,9 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
         return cellTime < valueTime
       case 'lte':
         return cellTime <= valueTime
-      case 'contains':
-        return str.toLowerCase().includes(c.value.toLowerCase())
       default:
-        return String(cellTime) === c.value
+        // 'contains' and 'not_empty'/'empty' are not meaningful for dates.
+        return false
     }
   }
 
@@ -51,7 +50,7 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
     const vNum = Number(c.value)
     switch (c.operator) {
       case 'equals':
-        return !Number.isNaN(num) && num === vNum
+        return !Number.isNaN(num) && !Number.isNaN(vNum) && num === vNum
       case 'contains':
         return str.toLowerCase().includes(c.value.toLowerCase())
       case 'gt':
@@ -63,7 +62,7 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
       case 'lte':
         return !Number.isNaN(num) && !Number.isNaN(vNum) && num <= vNum
       default:
-        return true
+        return false
     }
   }
 
@@ -73,16 +72,23 @@ function matchesCondition(row: DataRow, c: FilterCondition): boolean {
     case 'contains':
       return str.toLowerCase().includes(c.value.toLowerCase())
     case 'gt':
-      return !Number.isNaN(num) && num > Number(c.value)
+      return !Number.isNaN(num) && !Number.isNaN(Number(c.value)) && num > Number(c.value)
     case 'gte':
-      return !Number.isNaN(num) && num >= Number(c.value)
+      return !Number.isNaN(num) && !Number.isNaN(Number(c.value)) && num >= Number(c.value)
     case 'lt':
-      return !Number.isNaN(num) && num < Number(c.value)
+      return !Number.isNaN(num) && !Number.isNaN(Number(c.value)) && num < Number(c.value)
     case 'lte':
-      return !Number.isNaN(num) && num <= Number(c.value)
+      return !Number.isNaN(num) && !Number.isNaN(Number(c.value)) && num <= Number(c.value)
     default:
-      return true
+      return false
   }
+}
+
+/** Normalise a timestamp to the start of its calendar day for day-equality checks. */
+function dayStart(ts: number): number {
+  const d = new Date(ts)
+  d.setUTCHours(0, 0, 0, 0)
+  return d.getTime()
 }
 
 export function filterRows(

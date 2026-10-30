@@ -50,9 +50,17 @@ export function runCleanData(dataset: Dataset, options: CleanDataOptions = {}): 
   } = options
 
   const columnsToClean = colSet.length > 0 ? colSet : dataset.columns
-  const stdByCol = new Map<string, StandardizeRule>()
+  
+  // Build per-column standardize maps with case-insensitive lookup keys.
+  // Keys are lowercased so that "Active => Active" matches cell values "active", "ACTIVE", etc.
+  const stdByCol = new Map<string, { map: Record<string, string>; exactOnly: boolean }>()
   for (const r of standardizeRules) {
-    if (r.column) stdByCol.set(r.column, r)
+    if (!r.column) continue
+    const lowercasedMap: Record<string, string> = {}
+    for (const [k, v] of Object.entries(r.map)) {
+      lowercasedMap[k.toLowerCase()] = v
+    }
+    stdByCol.set(r.column, { map: lowercasedMap, exactOnly: r.exactOnly ?? false })
   }
 
   const outRows: DataRow[] = dataset.rows.map((row) => {
@@ -62,7 +70,7 @@ export function runCleanData(dataset: Dataset, options: CleanDataOptions = {}): 
       const v = out[col]
       let result: string | number
       const std = stdByCol.get(col)
-      if (std && std.map) {
+      if (std) {
         const s = String(v ?? '').trim()
         const exact = std.map[s]
         if (exact !== undefined) {

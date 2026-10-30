@@ -32,7 +32,9 @@ export function runAggregate(
       const nums = values.map((v) => (typeof v === 'number' ? v : Number(v))).filter((n) => !Number.isNaN(n))
       let val: string | number = ''
       if (fn === 'count') {
-        val = groupRows.length
+        // Count non-empty values of the aggregate column (standard SQL COUNT semantics),
+        // not the total number of rows in the group.
+        val = values.length
       } else if (fn === 'sum' && nums.length) {
         val = nums.reduce((a, b) => a + b, 0)
       } else if (fn === 'avg' && nums.length) {
@@ -64,13 +66,22 @@ export function runPivot(
   const colVals = [...new Set(rows.map((r) => String(r[colDimension] ?? '')))].sort()
   const columns = [rowDimension, ...colVals]
 
+  // Pre-bucket rows by (rowDimension, colDimension) key so cell lookup is O(1)
+  // instead of O(rows) per cell — turning an O(rows × rowVals × colVals) algorithm
+  // into O(rows + rowVals × colVals).
+  const bucketKey = (rv: string, cv: string): string => `${rv}\t${cv}`
+  const buckets = new Map<string, DataRow[]>()
+  for (const r of rows) {
+    const k = bucketKey(String(r[rowDimension] ?? ''), String(r[colDimension] ?? ''))
+    if (!buckets.has(k)) buckets.set(k, [])
+    buckets.get(k)!.push(r)
+  }
+
   const getCell = (rowVal: string, colVal: string): string | number => {
-    const group = rows.filter(
-      (r) => String(r[rowDimension] ?? '') === rowVal && String(r[colDimension] ?? '') === colVal
-    )
+    const group = buckets.get(bucketKey(rowVal, colVal)) ?? []
     const nums = group.map((r) => r[valueColumn]).filter((v) => v !== '' && v != null)
     const numArr = nums.map((v) => (typeof v === 'number' ? v : Number(v))).filter((n) => !Number.isNaN(n))
-    if (fn === 'count') return group.length
+    if (fn === 'count') return valuesLength(group, valueColumn)
     if (fn === 'sum' && numArr.length) return numArr.reduce((a, b) => a + b, 0)
     if (fn === 'avg' && numArr.length) return numArr.reduce((a, b) => a + b, 0) / numArr.length
     if (fn === 'min' && numArr.length) return Math.min(...numArr)
@@ -87,4 +98,9 @@ export function runPivot(
   })
 
   return { columns, rows: resultRows }
+}
+
+/** Count non-empty values of a column within a group (standard COUNT semantics). */
+function valuesLength(rows: DataRow[], column: string): number {
+  return rows.filter((r) => r[column] !== '' && r[column] != null).length
 }

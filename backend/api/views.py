@@ -45,7 +45,20 @@ def parse_upload(request):
         return JsonResponse({"error": "pandas not available"}, status=500)
     try:
         if name.endswith(".csv"):
-            df = pd.read_csv(upload, dtype=str, on_bad_lines="skip", encoding="utf-8")
+            # Try encodings in order: utf-8, utf-8-sig (BOM), latin-1, cp1252.
+            # Real-world CSVs from HR/payroll systems often use Windows-1252 or have a BOM.
+            df = None
+            last_err = None
+            for enc in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+                try:
+                    upload.seek(0)
+                    df = pd.read_csv(upload, dtype=str, on_bad_lines="skip", encoding=enc)
+                    break
+                except Exception as e:
+                    last_err = e
+                    continue
+            if df is None:
+                raise last_err or Exception("Failed to parse CSV with any supported encoding")
         elif name.endswith(".xlsx"):
             df = pd.read_excel(upload, engine="openpyxl", dtype=str)
         else:
@@ -57,7 +70,16 @@ def parse_upload(request):
     if len(df) > PARSE_MAX_ROWS:
         df = df.head(PARSE_MAX_ROWS)
     rows = df.to_dict(orient="records")
-    return JsonResponse({"columns": columns, "rows": rows})
+    return JsonResponse({
+        "columns": columns,
+        "rows": rows,
+        "rowCount": len(rows),
+        "columnCount": len(columns),
+    })
+
+
+# Max rows for server-side XLSX export (prevent OOM on very large payloads)
+EXPORT_MAX_ROWS = 200_000
 
 
 @require_http_methods(["POST"])
@@ -70,6 +92,11 @@ def export_xlsx(request):
         columns = body.get("columns", [])
         if not columns and rows:
             columns = [str(i) for i in range(len(rows[0]))]
+        if len(rows) > EXPORT_MAX_ROWS:
+            return JsonResponse(
+                {"error": f"Too many rows for server export (max {EXPORT_MAX_ROWS}). Use CSV export instead."},
+                status=400,
+            )
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Export"
@@ -86,7 +113,10 @@ def export_xlsx(request):
         wb.save(buf)
         buf.seek(0)
         res = HttpResponse(buf.read(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        res["Content-Disposition"] = 'attachment; filename="export.xlsx"'
+        from datetime import datetime
+
+        fname = datetime.utcnow().strftime("export_%Y%m%d_%H%M%S.xlsx")
+        res["Content-Disposition"] = f'attachment; filename="{fname}"'
         return res
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

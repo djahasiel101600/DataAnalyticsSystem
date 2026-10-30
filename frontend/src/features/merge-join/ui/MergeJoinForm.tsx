@@ -27,6 +27,7 @@ export function MergeJoinForm() {
   const [rightKeyColumns, setRightKeyColumns] = useState<string[]>([])
   const [joinType, setJoinType] = useState<JoinType>('left')
   const [running, setRunning] = useState(false)
+  const [diag, setDiag] = useState<string | null>(null)
 
   const left = leftId ? getDataset(leftId) : null
   const right = rightId ? getDataset(rightId) : null
@@ -39,9 +40,18 @@ export function MergeJoinForm() {
   const handleRun = () => {
     if (!left || !right || leftKeyColumns.length === 0 || rightKeyColumns.length === 0) return
     setRunning(true)
+    setDiag(null)
     try {
-      const { columns, rows } = runMergeJoin(left, right, leftKeyColumns, rightKeyColumns, joinType)
+      const { columns, rows, diagnostics } = runMergeJoin(
+        left,
+        right,
+        leftKeyColumns,
+        rightKeyColumns,
+        joinType,
+        { strict: true }
+      )
       setResult({ columns, rows })
+      if (diagnostics.length > 0) setDiag(diagnostics.join(' ; '))
     } finally {
       setRunning(false)
     }
@@ -129,6 +139,9 @@ export function MergeJoinForm() {
               ))}
             </div>
           </div>
+        )}
+        {diag && (
+          <p className="text-xs text-amber-700 dark:text-amber-300">{diag}</p>
         )}
         <Button
           onClick={handleRun}
