@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowLeftRight,
   BarChart3,
@@ -26,6 +27,7 @@ import { ExceptionReportForm } from "@/features/exception-report";
 import { CleanDataForm } from "@/features/clean-data";
 import { CompareDatasetsForm } from "@/features/compare-datasets";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Button } from "@/shared/ui/button";
 
 interface Operation {
   value: string;
@@ -50,6 +52,8 @@ const operations: Operation[] = [
 ];
 
 export function OperationsPanel() {
+  const [resetVersions, setResetVersions] = useState<Record<string, number>>({});
+
   return (
     <Tabs
       defaultValue="duplicate"
@@ -73,13 +77,35 @@ export function OperationsPanel() {
         </TabsList>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        {operations.map(({ value, form }) => (
+        {operations.map(({ value, label, form }) => (
           <TabsContent
             key={value}
             value={value}
-            className="mt-0 focus-visible:outline-none"
+            forceMount
+            className="mt-0 focus-visible:outline-none data-[state=inactive]:hidden"
           >
-            {form}
+            <div key={`${value}:${resetVersions[value] ?? 0}`}>
+              <div className="mb-2 flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[10px] text-muted-foreground"
+                  onClick={() => {
+                    if (!window.confirm(`Reset the ${label} configuration?`)) {
+                      return;
+                    }
+                    setResetVersions((versions) => ({
+                      ...versions,
+                      [value]: (versions[value] ?? 0) + 1,
+                    }));
+                  }}
+                >
+                  Reset configuration
+                </Button>
+              </div>
+              {form}
+            </div>
           </TabsContent>
         ))}
       </div>
