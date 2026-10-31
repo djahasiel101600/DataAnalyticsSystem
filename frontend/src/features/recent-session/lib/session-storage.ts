@@ -1,19 +1,34 @@
 import type { Dataset } from '@/entities/dataset'
+import type { OperationConfigurations } from '@/app/store/OperationConfigContext'
 
 const DATABASE_NAME = 'data-analytics-session'
-const DATABASE_VERSION = 1
+const DATABASE_VERSION = 2
 const SESSION_STORE = 'sessions'
-const SESSION_KEY = 'recent'
 const LEGACY_SESSION_KEY = 'data-analytics-session'
+const LEGACY_RECORD_KEY = 'recent'
 
 export interface SavedSession {
   datasets: Dataset[]
   result: { columns: string[]; rows: Record<string, unknown>[] } | null
+  operationConfigs: OperationConfigurations
 }
 
-interface StoredSession {
-  version: 1
+export interface SavedSessionRecord {
+  id: string
+  name: string
+  savedAt: number
   data: SavedSession
+}
+
+interface StoredSessionRecord extends SavedSessionRecord {
+  version: 2
+}
+
+interface LegacyStoredSession {
+  version: 1
+  data: Omit<SavedSession, 'operationConfigs'> & {
+    operationConfigs?: OperationConfigurations
+  }
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -52,8 +67,16 @@ function readRequest<T>(request: IDBRequest<T>): Promise<T> {
   })
 }
 
-function isSavedSession(value: unknown): value is SavedSession {
-  if (!value || typeof value !== 'object') return false
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isOperationConfigurations(value: unknown): value is OperationConfigurations {
+  return isObject(value) && Object.values(value).every(isObject)
+}
+
+function isSessionData(value: unknown): value is SavedSession {
+  if (!isObject(value)) return false
   const session = value as Partial<SavedSession>
   return (
     Array.isArray(session.datasets) &&
@@ -64,30 +87,56 @@ function isSavedSession(value: unknown): value is SavedSession {
         typeof dataset.id === 'string' &&
         typeof dataset.name === 'string' &&
         Array.isArray(dataset.columns) &&
+        dataset.columns.every((column) => typeof column === 'string') &&
         Array.isArray(dataset.rows),
     ) &&
     (session.result === null ||
-      (typeof session.result === 'object' &&
+      (isObject(session.result) &&
         Array.isArray(session.result.columns) &&
         session.result.columns.every((column) => typeof column === 'string') &&
-        Array.isArray(session.result.rows)))
+        Array.isArray(session.result.rows))) &&
+    (session.operationConfigs === undefined ||
+      isOperationConfigurations(session.operationConfigs))
   )
 }
 
-function isStoredSession(value: unknown): value is StoredSession {
-  if (!value || typeof value !== 'object') return false
-  const stored = value as Partial<StoredSession>
-  return stored.version === 1 && isSavedSession(stored.data)
+function normalizeSessionData(value: unknown): SavedSession {
+  if (!isSessionData(value)) {
+    throw new Error('The saved session has an unsupported format or is corrupted.')
+  }
+  return {
+    datasets: value.datasets,
+    result: value.result,
+    operationConfigs: value.operationConfigs ?? {},
+  }
 }
 
-async function writeSession(session: SavedSession): Promise<void> {
+function isStoredSessionRecord(value: unknown): value is StoredSessionRecord {
+  return (
+    isObject(value) &&
+    value.version === 2 &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.savedAt === 'number' &&
+    isSessionData(value.data) &&
+    isOperationConfigurations(value.data.operationConfigs)
+  )
+}
+
+function makeId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+async function writeRecord(record: SavedSessionRecord): Promise<void> {
   const database = await openDatabase()
   try {
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction(SESSION_STORE, 'readwrite')
       transaction.objectStore(SESSION_STORE).put(
-        { version: 1, data: session } satisfies StoredSession,
-        SESSION_KEY,
+        { ...record, version: 2 } satisfies StoredSessionRecord,
+        record.id,
       )
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(
@@ -102,69 +151,156 @@ async function writeSession(session: SavedSession): Promise<void> {
   }
 }
 
-async function readStoredSession(): Promise<SavedSession | null> {
+async function migrateLegacyRecords(
+  entries: { key: IDBValidKey; value: unknown }[],
+): Promise<SavedSessionRecord[]> {
+  const migrated: SavedSessionRecord[] = []
+  for (const entry of entries) {
+    if (entry.key !== LEGACY_RECORD_KEY) continue
+    const value = entry.value as Partial<LegacyStoredSession> | null
+    if (!value || value.version !== 1) continue
+    const data = normalizeSessionData(value.data)
+    const record = {
+      id: makeId(),
+      name: 'Recovered session',
+      savedAt: Date.now(),
+      data,
+    }
+    const database = await openDatabase()
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(SESSION_STORE, 'readwrite')
+        const store = transaction.objectStore(SESSION_STORE)
+        store.put({ ...record, version: 2 } satisfies StoredSessionRecord, record.id)
+        store.delete(LEGACY_RECORD_KEY)
+        transaction.oncomplete = () => resolve()
+        transaction.onerror = () => reject(
+          transaction.error ?? new Error('Could not migrate the saved session.'),
+        )
+        transaction.onabort = () => reject(
+          transaction.error ?? new Error('Session migration was cancelled.'),
+        )
+      })
+    } finally {
+      database.close()
+    }
+    migrated.push(record)
+  }
+  return migrated
+}
+
+export async function listSavedSessions(): Promise<SavedSessionRecord[]> {
+  const database = await openDatabase()
+  let entries: { key: IDBValidKey; value: unknown }[]
+  try {
+    const transaction = database.transaction(SESSION_STORE, 'readonly')
+    const store = transaction.objectStore(SESSION_STORE)
+    const [keys, values] = await Promise.all([
+      readRequest(store.getAllKeys()),
+      readRequest<unknown[]>(store.getAll()),
+    ])
+    entries = keys.map((key, index) => ({ key, value: values[index] }))
+  } finally {
+    database.close()
+  }
+
+  const migrated = await migrateLegacyRecords(entries)
+  const records = entries
+    .filter((entry) => entry.key !== LEGACY_RECORD_KEY)
+    .map((entry) => {
+      if (!isStoredSessionRecord(entry.value)) {
+        throw new Error('A saved session has an unsupported format or is corrupted.')
+      }
+      return {
+        id: entry.value.id,
+        name: entry.value.name,
+        savedAt: entry.value.savedAt,
+        data: normalizeSessionData(entry.value.data),
+      }
+    })
+  const legacyRaw = localStorage.getItem(LEGACY_SESSION_KEY)
+  if (legacyRaw) {
+    let legacy: unknown
+    try {
+      legacy = JSON.parse(legacyRaw)
+    } catch {
+      throw new Error('The saved session is corrupted and cannot be restored.')
+    }
+    const record = {
+      id: makeId(),
+      name: 'Recovered session',
+      savedAt: Date.now(),
+      data: normalizeSessionData(legacy),
+    }
+    await writeRecord(record)
+    localStorage.removeItem(LEGACY_SESSION_KEY)
+    migrated.push(record)
+  }
+  return [...records, ...migrated].sort((a, b) => b.savedAt - a.savedAt)
+}
+
+export async function saveSession(
+  name: string,
+  data: SavedSession,
+): Promise<SavedSessionRecord> {
+  const trimmedName = name.trim()
+  if (!trimmedName) throw new Error('Enter a name for this session.')
+  const record = {
+    id: makeId(),
+    name: trimmedName,
+    savedAt: Date.now(),
+    data: normalizeSessionData(data),
+  }
+  await writeRecord(record)
+  localStorage.removeItem(LEGACY_SESSION_KEY)
+  return record
+}
+
+export async function loadSession(id: string): Promise<SavedSession | null> {
   const database = await openDatabase()
   try {
     const transaction = database.transaction(SESSION_STORE, 'readonly')
     const stored = await readRequest<unknown>(
-      transaction.objectStore(SESSION_STORE).get(SESSION_KEY),
+      transaction.objectStore(SESSION_STORE).get(id),
     )
     if (stored === undefined) return null
-    if (!isStoredSession(stored)) {
+    if (!isStoredSessionRecord(stored)) {
       throw new Error('The saved session has an unsupported format or is corrupted.')
     }
-    return stored.data
+    return normalizeSessionData(stored.data)
   } finally {
     database.close()
   }
 }
 
-export async function hasSavedSession(): Promise<boolean> {
-  const session = await readStoredSession()
-  if (session) return true
-  return localStorage.getItem(LEGACY_SESSION_KEY) !== null
-}
-
-export async function saveSession(session: SavedSession): Promise<void> {
-  try {
-    await writeSession(session)
-    localStorage.removeItem(LEGACY_SESSION_KEY)
-  } catch (error) {
-    if (error instanceof Error) throw error
-    throw new Error('Could not save the session.')
-  }
-}
-
-export async function loadSession(): Promise<SavedSession | null> {
-  const stored = await readStoredSession()
-  if (stored) return stored
-
-  const legacyRaw = localStorage.getItem(LEGACY_SESSION_KEY)
-  if (!legacyRaw) return null
-  let legacy: unknown
-  try {
-    legacy = JSON.parse(legacyRaw)
-  } catch {
-    throw new Error('The saved session is corrupted and cannot be restored.')
-  }
-  if (!isSavedSession(legacy)) {
-    throw new Error('The saved session has an unsupported format and cannot be restored.')
-  }
-
-  await writeSession(legacy)
-  localStorage.removeItem(LEGACY_SESSION_KEY)
-  return legacy
-}
-
-export async function clearSavedSession(): Promise<void> {
+export async function deleteSavedSession(id: string): Promise<void> {
   const database = await openDatabase()
   try {
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction(SESSION_STORE, 'readwrite')
-      transaction.objectStore(SESSION_STORE).delete(SESSION_KEY)
+      transaction.objectStore(SESSION_STORE).delete(id)
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(
-        transaction.error ?? new Error('Could not clear the saved session.'),
+        transaction.error ?? new Error('Could not delete the saved session.'),
+      )
+      transaction.onabort = () => reject(
+        transaction.error ?? new Error('Session deletion was cancelled.'),
+      )
+    })
+  } finally {
+    database.close()
+  }
+}
+
+export async function clearSavedSessions(): Promise<void> {
+  const database = await openDatabase()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(SESSION_STORE, 'readwrite')
+      transaction.objectStore(SESSION_STORE).clear()
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(
+        transaction.error ?? new Error('Could not clear saved sessions.'),
       )
       transaction.onabort = () => reject(
         transaction.error ?? new Error('Session clear was cancelled.'),

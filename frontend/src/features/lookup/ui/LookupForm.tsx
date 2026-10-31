@@ -18,6 +18,7 @@ import {
 } from "@/shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { StatusPill } from "@/shared/ui/status-pill";
+import { useOperationConfigState } from "@/app/store/OperationConfigContext";
 
 const emptyPair = (): KeyPair => ({ sourceColumn: "", lookupColumn: "" });
 
@@ -209,14 +210,14 @@ function OptionCheckbox({
 export function LookupForm() {
   const { datasets, getDataset, setResult } = useDatasets();
 
-  const [sourceId, setSourceId] = useState("");
-  const [lookupId, setLookupId] = useState("");
-  const [primaryPairs, setPrimaryPairs] = useState<KeyPair[]>([emptyPair()]);
-  const [fallbackSets, setFallbackSets] = useState<KeyPair[][]>([]);
-  const [retrieve, setRetrieve] = useState<string[]>([]);
-  const [options, setOptions] = useState<
+  const [sourceId, setSourceId] = useOperationConfigState("lookup", "sourceId", "");
+  const [lookupId, setLookupId] = useOperationConfigState("lookup", "lookupId", "");
+  const [primaryPairs, setPrimaryPairs] = useOperationConfigState<KeyPair[]>("lookup", "primaryPairs", [emptyPair()]);
+  const [fallbackSets, setFallbackSets] = useOperationConfigState<KeyPair[][]>("lookup", "fallbackSets", []);
+  const [retrieve, setRetrieve] = useOperationConfigState<string[]>("lookup", "retrieve", []);
+  const [options, setOptions] = useOperationConfigState<
     Required<Pick<LookupOptions, "ignoreCase" | "trim">>
-  >({
+  >("lookup", "options", {
     ignoreCase: true,
     trim: true,
   });

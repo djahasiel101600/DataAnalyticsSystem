@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 const JOIN_TYPES: { value: JoinType; label: string }[] = [
   { value: 'inner', label: 'Inner' },
@@ -21,11 +22,11 @@ const JOIN_TYPES: { value: JoinType; label: string }[] = [
 
 export function MergeJoinForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [leftId, setLeftId] = useState('')
-  const [rightId, setRightId] = useState('')
-  const [leftKeyColumns, setLeftKeyColumns] = useState<string[]>([])
-  const [rightKeyColumns, setRightKeyColumns] = useState<string[]>([])
-  const [joinType, setJoinType] = useState<JoinType>('left')
+  const [leftId, setLeftId] = useOperationConfigState('merge', 'leftId', '')
+  const [rightId, setRightId] = useOperationConfigState('merge', 'rightId', '')
+  const [leftKeyColumns, setLeftKeyColumns] = useOperationConfigState<string[]>('merge', 'leftKeyColumns', [])
+  const [rightKeyColumns, setRightKeyColumns] = useOperationConfigState<string[]>('merge', 'rightKeyColumns', [])
+  const [joinType, setJoinType] = useOperationConfigState<JoinType>('merge', 'joinType', 'left')
   const [running, setRunning] = useState(false)
   const [diag, setDiag] = useState<string | null>(null)
 

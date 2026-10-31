@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 const AGG_FNS: { value: AggregateFn; label: string }[] = [
   { value: 'sum', label: 'Sum' },
@@ -24,15 +25,15 @@ type AggregateSpec = { column: string; fn: AggregateFn }
 
 export function AggregateForm() {
   const { datasets, getDataset, result, setResult } = useDatasets()
-  const [source, setSource] = useState<'dataset' | 'result'>('dataset')
-  const [datasetId, setDatasetId] = useState('')
-  const [mode, setMode] = useState<'group' | 'pivot'>('group')
-  const [groupBy, setGroupBy] = useState<string[]>([])
-  const [aggregates, setAggregates] = useState<AggregateSpec[]>([{ column: '', fn: 'sum' }])
-  const [pivotRowDim, setPivotRowDim] = useState('')
-  const [pivotColDim, setPivotColDim] = useState('')
-  const [pivotValueCol, setPivotValueCol] = useState('')
-  const [pivotFn, setPivotFn] = useState<AggregateFn>('sum')
+  const [source, setSource] = useOperationConfigState<'dataset' | 'result'>('aggregate', 'source', 'dataset')
+  const [datasetId, setDatasetId] = useOperationConfigState('aggregate', 'datasetId', '')
+  const [mode, setMode] = useOperationConfigState<'group' | 'pivot'>('aggregate', 'mode', 'group')
+  const [groupBy, setGroupBy] = useOperationConfigState<string[]>('aggregate', 'groupBy', [])
+  const [aggregates, setAggregates] = useOperationConfigState<AggregateSpec[]>('aggregate', 'aggregates', [{ column: '', fn: 'sum' }])
+  const [pivotRowDim, setPivotRowDim] = useOperationConfigState('aggregate', 'pivotRowDim', '')
+  const [pivotColDim, setPivotColDim] = useOperationConfigState('aggregate', 'pivotColDim', '')
+  const [pivotValueCol, setPivotValueCol] = useOperationConfigState('aggregate', 'pivotValueCol', '')
+  const [pivotFn, setPivotFn] = useOperationConfigState<AggregateFn>('aggregate', 'pivotFn', 'sum')
   const [running, setRunning] = useState(false)
 
   const data = source === 'result' && result ? result : datasetId ? getDataset(datasetId) : null

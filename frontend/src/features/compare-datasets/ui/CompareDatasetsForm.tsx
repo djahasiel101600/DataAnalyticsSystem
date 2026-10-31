@@ -11,15 +11,16 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 export function CompareDatasetsForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [oldId, setOldId] = useState<string>('')
-  const [newId, setNewId] = useState<string>('')
-  const [keyColumns, setKeyColumns] = useState<string[]>([])
-  const [detectUpdates, setDetectUpdates] = useState(true)
-  const [ignoreCase, setIgnoreCase] = useState(false)
-  const [trim, setTrim] = useState(false)
+  const [oldId, setOldId] = useOperationConfigState('compare', 'oldId', '')
+  const [newId, setNewId] = useOperationConfigState('compare', 'newId', '')
+  const [keyColumns, setKeyColumns] = useOperationConfigState<string[]>('compare', 'keyColumns', [])
+  const [detectUpdates, setDetectUpdates] = useOperationConfigState('compare', 'detectUpdates', true)
+  const [ignoreCase, setIgnoreCase] = useOperationConfigState('compare', 'ignoreCase', false)
+  const [trim, setTrim] = useOperationConfigState('compare', 'trim', false)
   const [running, setRunning] = useState(false)
 
   const oldDs = oldId ? getDataset(oldId) : null

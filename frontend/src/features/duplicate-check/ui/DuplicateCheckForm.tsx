@@ -19,19 +19,20 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 export function DuplicateCheckForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [datasetId, setDatasetId] = useState<string>('')
-  const [keyColumns, setKeyColumns] = useState<string[]>([])
-  const [mode, setMode] = useState<DuplicateCheckMode>('mark')
-  const [keepStrategy, setKeepStrategy] = useState<DuplicateKeepStrategy>('first')
-  const [keepByColumn, setKeepByColumn] = useState<string>('')
-  const [compareAs, setCompareAs] = useState<DuplicateCompareAs>('auto')
-  const [priorityValues, setPriorityValues] = useState<string>('') // comma-separated
-  const [addKeepPreviewColumns, setAddKeepPreviewColumns] = useState(true)
-  const [ignoreCase, setIgnoreCase] = useState(false)
-  const [trim, setTrim] = useState(false)
+  const [datasetId, setDatasetId] = useOperationConfigState('duplicate', 'datasetId', '')
+  const [keyColumns, setKeyColumns] = useOperationConfigState<string[]>('duplicate', 'keyColumns', [])
+  const [mode, setMode] = useOperationConfigState<DuplicateCheckMode>('duplicate', 'mode', 'mark')
+  const [keepStrategy, setKeepStrategy] = useOperationConfigState<DuplicateKeepStrategy>('duplicate', 'keepStrategy', 'first')
+  const [keepByColumn, setKeepByColumn] = useOperationConfigState('duplicate', 'keepByColumn', '')
+  const [compareAs, setCompareAs] = useOperationConfigState<DuplicateCompareAs>('duplicate', 'compareAs', 'auto')
+  const [priorityValues, setPriorityValues] = useOperationConfigState('duplicate', 'priorityValues', '')
+  const [addKeepPreviewColumns, setAddKeepPreviewColumns] = useOperationConfigState('duplicate', 'addKeepPreviewColumns', true)
+  const [ignoreCase, setIgnoreCase] = useOperationConfigState('duplicate', 'ignoreCase', false)
+  const [trim, setTrim] = useOperationConfigState('duplicate', 'trim', false)
   const [running, setRunning] = useState(false)
 
   useEffect(() => {

@@ -4,11 +4,12 @@ import { askAI } from '../lib/ask-ai'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 export function AskAIForm() {
   const { result, datasets, getDataset } = useDatasets()
-  const [datasetChoice, setDatasetChoice] = useState<string>('')
-  const [message, setMessage] = useState('')
+  const [datasetChoice, setDatasetChoice] = useOperationConfigState('ai', 'datasetChoice', '')
+  const [message, setMessage] = useOperationConfigState('ai', 'message', '')
   const [reply, setReply] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

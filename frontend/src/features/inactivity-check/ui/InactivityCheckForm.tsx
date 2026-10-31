@@ -12,13 +12,14 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 export function InactivityCheckForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [datasetId, setDatasetId] = useState<string>('')
-  const [dateColumn, setDateColumn] = useState<string>('')
-  const [thresholdDays, setThresholdDays] = useState(3)
-  const [referenceDate, setReferenceDate] = useState('')
+  const [datasetId, setDatasetId] = useOperationConfigState('inactivity', 'datasetId', '')
+  const [dateColumn, setDateColumn] = useOperationConfigState('inactivity', 'dateColumn', '')
+  const [thresholdDays, setThresholdDays] = useOperationConfigState('inactivity', 'thresholdDays', 3)
+  const [referenceDate, setReferenceDate] = useOperationConfigState('inactivity', 'referenceDate', '')
   const [running, setRunning] = useState(false)
 
   const dataset = datasetId ? getDataset(datasetId) : null

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 const REGEX_TEMPLATES: { id: string; label: string; value: string; note?: string }[] = [
   { id: 'custom', label: 'Custom', value: '' },
@@ -38,11 +39,11 @@ const REGEX_TEMPLATES: { id: string; label: string; value: string; note?: string
 
 export function RegexSearchForm() {
   const { datasets, setResult } = useDatasets()
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [columnsByDs, setColumnsByDs] = useState<Record<string, string[]>>({})
-  const [regex, setRegex] = useState('')
-  const [templateId, setTemplateId] = useState('custom')
-  const [searchAll, setSearchAll] = useState(false)
+  const [selectedIds, setSelectedIds] = useOperationConfigState<string[]>('regex', 'selectedIds', [])
+  const [columnsByDs, setColumnsByDs] = useOperationConfigState<Record<string, string[]>>('regex', 'columnsByDs', {})
+  const [regex, setRegex] = useOperationConfigState('regex', 'regex', '')
+  const [templateId, setTemplateId] = useOperationConfigState('regex', 'templateId', 'custom')
+  const [searchAll, setSearchAll] = useOperationConfigState('regex', 'searchAll', false)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
 

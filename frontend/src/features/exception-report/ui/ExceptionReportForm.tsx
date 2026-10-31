@@ -12,17 +12,18 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 export function ExceptionReportForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [primaryId, setPrimaryId] = useState<string>('')
-  const [keyColumns, setKeyColumns] = useState<string[]>([])
-  const [dateColumn, setDateColumn] = useState<string>('')
-  const [thresholdDays, setThresholdDays] = useState(3)
-  const [masterId, setMasterId] = useState<string>('')
-  const [masterKeyColumns, setMasterKeyColumns] = useState<string[]>([])
-  const [ignoreCase, setIgnoreCase] = useState(false)
-  const [trim, setTrim] = useState(false)
+  const [primaryId, setPrimaryId] = useOperationConfigState('exceptions', 'primaryId', '')
+  const [keyColumns, setKeyColumns] = useOperationConfigState<string[]>('exceptions', 'keyColumns', [])
+  const [dateColumn, setDateColumn] = useOperationConfigState('exceptions', 'dateColumn', '')
+  const [thresholdDays, setThresholdDays] = useOperationConfigState('exceptions', 'thresholdDays', 3)
+  const [masterId, setMasterId] = useOperationConfigState('exceptions', 'masterId', '')
+  const [masterKeyColumns, setMasterKeyColumns] = useOperationConfigState<string[]>('exceptions', 'masterKeyColumns', [])
+  const [ignoreCase, setIgnoreCase] = useOperationConfigState('exceptions', 'ignoreCase', false)
+  const [trim, setTrim] = useOperationConfigState('exceptions', 'trim', false)
   const [running, setRunning] = useState(false)
 
   const primary = primaryId ? getDataset(primaryId) : null

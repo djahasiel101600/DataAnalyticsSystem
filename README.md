@@ -310,7 +310,7 @@ Click the button for the format you want. Your browser will download the file.
 
 - **Undo:** Press `Ctrl + Z` (or `Cmd + Z` on Mac) to go back to the previous result. You can undo up to 20 times.
 - **Saved results:** Save the current result with a name, and load it later.
-- **Recent session:** Save all your datasets and the current result so you can reload them after refreshing the page.
+- **Saved sessions:** Save multiple named snapshots of your datasets, current result, and every operation's configuration. Restore a snapshot later or delete individual saved sessions. Data is stored in this browser.
 
 ---
 

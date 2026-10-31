@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 function parseStandardizeMap(text: string): Record<string, string> {
   const map: Record<string, string> = {}
@@ -31,14 +32,14 @@ function parseStandardizeMap(text: string): Record<string, string> {
 
 export function CleanDataForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [datasetId, setDatasetId] = useState<string>('')
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
-  const [trim, setTrim] = useState(true)
-  const [lowercase, setLowercase] = useState(false)
-  const [uppercase, setUppercase] = useState(false)
-  const [fillEmpty, setFillEmpty] = useState('')
-  const [standardizeColumn, setStandardizeColumn] = useState<string>('')
-  const [standardizeMapText, setStandardizeMapText] = useState('')
+  const [datasetId, setDatasetId] = useOperationConfigState('clean', 'datasetId', '')
+  const [selectedColumns, setSelectedColumns] = useOperationConfigState<string[]>('clean', 'selectedColumns', [])
+  const [trim, setTrim] = useOperationConfigState('clean', 'trim', true)
+  const [lowercase, setLowercase] = useOperationConfigState('clean', 'lowercase', false)
+  const [uppercase, setUppercase] = useOperationConfigState('clean', 'uppercase', false)
+  const [fillEmpty, setFillEmpty] = useOperationConfigState('clean', 'fillEmpty', '')
+  const [standardizeColumn, setStandardizeColumn] = useOperationConfigState('clean', 'standardizeColumn', '')
+  const [standardizeMapText, setStandardizeMapText] = useOperationConfigState('clean', 'standardizeMapText', '')
   const [running, setRunning] = useState(false)
 
   const dataset = datasetId ? getDataset(datasetId) : null

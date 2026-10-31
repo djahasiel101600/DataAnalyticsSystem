@@ -28,6 +28,7 @@ import { CleanDataForm } from "@/features/clean-data";
 import { CompareDatasetsForm } from "@/features/compare-datasets";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Button } from "@/shared/ui/button";
+import { useOperationConfigurations } from "@/app/store/OperationConfigContext";
 
 interface Operation {
   value: string;
@@ -53,6 +54,7 @@ const operations: Operation[] = [
 
 export function OperationsPanel() {
   const [resetVersions, setResetVersions] = useState<Record<string, number>>({});
+  const operationConfigs = useOperationConfigurations();
 
   return (
     <Tabs
@@ -98,6 +100,7 @@ export function OperationsPanel() {
                     if (!window.confirm(`Reset the ${label} configuration?`)) {
                       return;
                     }
+                    operationConfigs.reset(value);
                     setResetVersions((versions) => ({
                       ...versions,
                       [value]: (versions[value] ?? 0) + 1,

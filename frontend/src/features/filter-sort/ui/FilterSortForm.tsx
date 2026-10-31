@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 const FILTER_OPS: { value: FilterOperator; label: string }[] = [
   { value: 'equals', label: 'Equals' },
@@ -41,11 +42,11 @@ const defaultCondition = (): FilterCondition => ({
 
 export function FilterSortForm() {
   const { datasets, getDataset, result, setResult } = useDatasets()
-  const [source, setSource] = useState<'dataset' | 'result'>('dataset')
-  const [datasetId, setDatasetId] = useState<string>('')
-  const [conditions, setConditions] = useState<FilterCondition[]>([defaultCondition()])
-  const [filterCombine, setFilterCombine] = useState<FilterCombine>('and')
-  const [sortSpecs, setSortSpecs] = useState<SortSpec[]>([])
+  const [source, setSource] = useOperationConfigState<'dataset' | 'result'>('filter', 'source', 'dataset')
+  const [datasetId, setDatasetId] = useOperationConfigState('filter', 'datasetId', '')
+  const [conditions, setConditions] = useOperationConfigState<FilterCondition[]>('filter', 'conditions', [defaultCondition()])
+  const [filterCombine, setFilterCombine] = useOperationConfigState<FilterCombine>('filter', 'filterCombine', 'and')
+  const [sortSpecs, setSortSpecs] = useOperationConfigState<SortSpec[]>('filter', 'sortSpecs', [])
   const [running, setRunning] = useState(false)
 
   const data = source === 'result' && result

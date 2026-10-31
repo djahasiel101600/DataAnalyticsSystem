@@ -12,6 +12,7 @@ import {
 } from '@/shared/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import type { Dataset } from '@/entities/dataset'
+import { useOperationConfigState } from '@/app/store/OperationConfigContext'
 
 type RefConfig = {
   datasetId: string
@@ -20,12 +21,12 @@ type RefConfig = {
 
 export function CoverageCheckForm() {
   const { datasets, getDataset, setResult } = useDatasets()
-  const [primaryId, setPrimaryId] = useState<string>('')
-  const [primaryKeyColumns, setPrimaryKeyColumns] = useState<string[]>([])
-  const [refs, setRefs] = useState<RefConfig[]>([])
-  const [ignoreCase, setIgnoreCase] = useState(false)
-  const [trim, setTrim] = useState(false)
-  const [outputMode, setOutputMode] = useState<CoverageOutputMode>('annotate')
+  const [primaryId, setPrimaryId] = useOperationConfigState('coverage', 'primaryId', '')
+  const [primaryKeyColumns, setPrimaryKeyColumns] = useOperationConfigState<string[]>('coverage', 'primaryKeyColumns', [])
+  const [refs, setRefs] = useOperationConfigState<RefConfig[]>('coverage', 'refs', [])
+  const [ignoreCase, setIgnoreCase] = useOperationConfigState('coverage', 'ignoreCase', false)
+  const [trim, setTrim] = useOperationConfigState('coverage', 'trim', false)
+  const [outputMode, setOutputMode] = useOperationConfigState<CoverageOutputMode>('coverage', 'outputMode', 'annotate')
   const [running, setRunning] = useState(false)
 
   const primary = primaryId ? getDataset(primaryId) : null

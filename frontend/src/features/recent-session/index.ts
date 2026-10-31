@@ -1,2 +1,8 @@
 export { RecentSessionCard } from './ui/RecentSessionCard'
-export { hasSavedSession, saveSession, loadSession, clearSavedSession } from './lib/session-storage'
+export {
+  clearSavedSessions,
+  deleteSavedSession,
+  listSavedSessions,
+  loadSession,
+  saveSession,
+} from './lib/session-storage'
