@@ -18,6 +18,7 @@ import { ExportButtons } from "@/features/export-data";
 import { SavedRecipesCard } from "@/features/saved-recipes";
 import { RecentSessionCard } from "@/features/recent-session";
 import { DataTableView } from "@/widgets/data-table";
+import { OperationHistoryPanel } from "@/widgets/operation-history";
 import { useDatasets } from "@/app/store/DatasetsContext";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -65,10 +66,35 @@ export function MainPage() {
     result,
     setResult,
     resultHighlight,
+    operationHistory,
+    currentOperationId,
+    restoreOperation,
     undo,
     canUndo,
   } = useDatasets();
   const dataset = (selectedId ? getDataset(selectedId) : undefined) ?? datasets[0] ?? null;
+  const displayedOperationId = result
+    ? currentOperationId
+    : operationHistory.find((entry) => entry.datasetId === dataset?.id)?.id ?? null;
+
+  const handleRestoreOperation = (id: string) => {
+    const targetIndex = operationHistory.findIndex((entry) => entry.id === id);
+    const currentIndex = operationHistory.findIndex(
+      (entry) => entry.id === displayedOperationId,
+    );
+    if (
+      result &&
+      currentIndex >= 0 &&
+      targetIndex >= 0 &&
+      targetIndex < currentIndex &&
+      !window.confirm(
+        "Restore this earlier result? Newer operations will remain in history and can be restored later.",
+      )
+    ) {
+      return;
+    }
+    restoreOperation(id);
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -230,6 +256,12 @@ export function MainPage() {
                 </div>
               </div>
             )}
+
+            <OperationHistoryPanel
+              entries={operationHistory}
+              currentOperationId={displayedOperationId}
+              onRestore={handleRestoreOperation}
+            />
 
             <div className="min-h-0 flex-1 p-2 sm:p-2">
               {result ? (

@@ -108,10 +108,19 @@ export function filterRowsByConditions(
   combine: FilterCombine
 ): DataRow[] {
   if (conditions.length === 0) return rows
-  return rows.filter((row) => {
-    const results = conditions.map((c) => matchesCondition(row, c))
-    return combine === 'and' ? results.every(Boolean) : results.some(Boolean)
-  })
+  return rows.filter((row) => rowMatchesConditions(row, conditions, combine))
+}
+
+export function rowMatchesConditions(
+  row: DataRow,
+  conditions: FilterCondition[],
+  combine: FilterCombine,
+): boolean {
+  if (conditions.length === 0) return true
+  const results = conditions.map((condition) =>
+    matchesCondition(row, condition),
+  )
+  return combine === 'and' ? results.every(Boolean) : results.some(Boolean)
 }
 
 export type SortDirection = 'asc' | 'desc'

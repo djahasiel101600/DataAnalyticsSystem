@@ -63,7 +63,11 @@ export function AggregateForm() {
           pivotValueCol,
           pivotFn
         )
-        setResult({ columns: outCols, rows: outRows })
+        setResult(
+          { columns: outCols, rows: outRows },
+          null,
+          { name: 'Aggregate / pivot', configKey: 'aggregate' },
+        )
       } else {
         const validAggs = aggregates.filter((a) => a.column)
         if (groupBy.length === 0 || validAggs.length === 0) return
@@ -73,7 +77,11 @@ export function AggregateForm() {
           groupBy,
           validAggs
         )
-        setResult({ columns: outCols, rows: outRows })
+        setResult(
+          { columns: outCols, rows: outRows },
+          null,
+          { name: 'Aggregate', configKey: 'aggregate' },
+        )
       }
     } finally {
       setRunning(false)

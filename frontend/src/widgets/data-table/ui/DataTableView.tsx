@@ -9,6 +9,7 @@ import {
   ArrowDown,
   ArrowUp,
   Download,
+  Filter,
   MessageSquareText,
   Redo2,
   Trash2,
@@ -33,11 +34,36 @@ import {
   type TableCommand,
   type TableWorkspace,
 } from "@/app/store/table-workspace";
+import {
+  rowMatchesConditions,
+  type FilterCombine,
+  type FilterCondition,
+  type FilterOperator,
+  type FilterValueType,
+} from "@/features/filter-sort/lib/run-filter-sort";
 
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
 const SELECT_WIDTH = 36;
 const ROW_WIDTH = 52;
 const DATA_WIDTH = 180;
+const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: "equals", label: "Equals" },
+  { value: "contains", label: "Contains" },
+  { value: "gt", label: "Greater than" },
+  { value: "gte", label: "Greater or equal" },
+  { value: "lt", label: "Less than" },
+  { value: "lte", label: "Less or equal" },
+  { value: "not_empty", label: "Not empty" },
+  { value: "empty", label: "Empty" },
+];
+const VALUE_FILTER_OPERATORS = new Set<FilterOperator>([
+  "equals",
+  "contains",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+]);
 
 export interface TableHighlight {
   pattern: string;
@@ -231,6 +257,9 @@ export function DataTableView({
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(maxRows);
   const [search, setSearch] = useState("");
+  const [columnFilters, setColumnFilters] = useState<FilterCondition[]>([]);
+  const [filterCombine, setFilterCombine] = useState<FilterCombine>("and");
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [sort, setSort] = useState<SortState>(null);
   const [selectionScope, setSelectionScope] =
     useState<SelectionScope>("page");
@@ -271,9 +300,23 @@ export function DataTableView({
     updater: (current: TableWorkspace) => TableWorkspace,
   ) => updateTableWorkspace(workspaceKey, rows, updater);
 
+  const activeFilterConditions = useMemo(
+    () => columnFilters.filter((condition) => condition.column),
+    [columnFilters],
+  );
   const filteredRecords = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     let result = workspace.records.filter((record) => {
+      if (
+        activeFilterConditions.length > 0 &&
+        !rowMatchesConditions(
+          record.row,
+          activeFilterConditions,
+          filterCombine,
+        )
+      ) {
+        return false;
+      }
       if (!query) return true;
       const values = [
         ...columns.map((column) => formatValue(record.row[column])),
@@ -304,7 +347,14 @@ export function DataTableView({
       });
     }
     return result;
-  }, [columns, search, sort, workspace]);
+  }, [
+    activeFilterConditions,
+    columns,
+    filterCombine,
+    search,
+    sort,
+    workspace,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
   const currentPage = Math.min(page, totalPages - 1);
@@ -353,13 +403,19 @@ export function DataTableView({
 
   useEffect(() => {
     setPage(0);
-  }, [search, sort, pageSize, workspaceKey, rows]);
+  }, [search, columnFilters, filterCombine, sort, pageSize, workspaceKey, rows]);
 
   useEffect(() => {
     if (columns.length > 0 && !columns.includes(bulkColumn)) {
       setBulkColumn(columns[0]);
     }
   }, [bulkColumn, columns]);
+
+  useEffect(() => {
+    setColumnFilters((current) =>
+      current.filter((condition) => columns.includes(condition.column)),
+    );
+  }, [columns]);
 
   const commit = (command: TableCommand | null) => {
     if (command) {
@@ -746,6 +802,18 @@ export function DataTableView({
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        <Button
+          size="sm"
+          variant={activeFilterConditions.length > 0 ? "secondary" : "outline"}
+          className="h-7 px-2 text-[10px]"
+          aria-expanded={filterPanelOpen}
+          onClick={() => setFilterPanelOpen((open) => !open)}
+        >
+          <Filter className="mr-1 h-3 w-3" />
+          Filters
+          {activeFilterConditions.length > 0 &&
+            ` · ${activeFilterConditions.length}`}
+        </Button>
         <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
           Select
           <select
@@ -814,7 +882,185 @@ export function DataTableView({
         >
           Unfreeze
         </Button>
+        <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+          {filteredRecords.length.toLocaleString()} of{" "}
+          {workspace.records.length.toLocaleString()} rows
+          {(activeFilterConditions.length > 0 || search.trim() !== "") &&
+            " · filtered"}
+        </span>
       </div>
+
+      {filterPanelOpen && (
+        <section
+          aria-label="Table filters"
+          className="flex flex-none flex-col gap-2 border-b border-border bg-muted/20 px-3 py-2"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-medium">Filter columns</span>
+            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              Combine
+              <select
+                className="h-7 rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground"
+                value={filterCombine}
+                onChange={(event) =>
+                  setFilterCombine(event.target.value as FilterCombine)
+                }
+                aria-label="Combine table filters"
+              >
+                <option value="and">AND</option>
+                <option value="or">OR</option>
+              </select>
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-[10px]"
+              onClick={() =>
+                setColumnFilters((current) => [
+                  ...current,
+                  {
+                    column: columns[0] ?? "",
+                    operator: "contains",
+                    value: "",
+                  },
+                ])
+              }
+              disabled={columns.length === 0}
+            >
+              Add condition
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[10px]"
+              onClick={() => {
+                setColumnFilters([]);
+                setFilterCombine("and");
+              }}
+              disabled={columnFilters.length === 0}
+            >
+              Clear filters
+            </Button>
+          </div>
+          {columnFilters.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground">
+              No column filters are active.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {columnFilters.map((condition, index) => (
+                <div
+                  key={index}
+                  className="flex min-w-0 flex-wrap items-center gap-1.5"
+                >
+                  <select
+                    className="h-7 min-w-28 flex-1 rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground"
+                    value={condition.column}
+                    onChange={(event) =>
+                      setColumnFilters((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, column: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                    aria-label={`Filter condition ${index + 1} column`}
+                  >
+                    {columns.map((column) => (
+                      <option key={column} value={column}>
+                        {column}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="h-7 min-w-28 rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground"
+                    value={condition.operator}
+                    onChange={(event) =>
+                      setColumnFilters((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                operator: event.target.value as FilterOperator,
+                              }
+                            : item,
+                        ),
+                      )
+                    }
+                    aria-label={`Filter condition ${index + 1} operator`}
+                  >
+                    {FILTER_OPERATORS.map((operator) => (
+                      <option key={operator.value} value={operator.value}>
+                        {operator.label}
+                      </option>
+                    ))}
+                  </select>
+                  {VALUE_FILTER_OPERATORS.has(condition.operator) && (
+                    <>
+                      <select
+                        className="h-7 rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground"
+                        value={condition.valueType ?? "text"}
+                        onChange={(event) =>
+                          setColumnFilters((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    valueType: event.target
+                                      .value as FilterValueType,
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                        aria-label={`Filter condition ${index + 1} value type`}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                      </select>
+                      <input
+                        className="h-7 min-w-24 flex-1 rounded-md border border-input bg-background px-2 text-[11px] text-foreground"
+                        value={condition.value}
+                        onChange={(event) =>
+                          setColumnFilters((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, value: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        aria-label={`Filter condition ${index + 1} value`}
+                        placeholder={
+                          condition.valueType === "date"
+                            ? "YYYY-MM-DD"
+                            : "Value"
+                        }
+                      />
+                    </>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() =>
+                      setColumnFilters((current) =>
+                        current.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                    aria-label={`Remove filter condition ${index + 1}`}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="flex flex-none flex-wrap items-center gap-1.5 border-b border-border bg-muted/20 px-3 py-1.5">
         <Button

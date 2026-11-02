@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { filterRowsByConditions, type FilterCondition } from './run-filter-sort'
+import {
+  filterRowsByConditions,
+  rowMatchesConditions,
+  type FilterCondition,
+} from './run-filter-sort'
 
 const rows = [
   { id: '1', name: 'Alice', last_active: '2025-03-18', amount: '100' },
@@ -151,5 +155,25 @@ describe('filterRowsByConditions - text handling', () => {
     const result2 = filterAnd([empty])
     expect(result2.length).toBe(1)
     expect(result2[0]?.id).toBe('3')
+  })
+
+  it('evaluates a new condition against a row independently of previous results', () => {
+    const notEmpty: FilterCondition = {
+      column: 'last_active',
+      operator: 'not_empty',
+      value: '',
+    }
+    const empty: FilterCondition = {
+      column: 'last_active',
+      operator: 'empty',
+      value: '',
+    }
+    const firstFiltered = filterRowsByConditions(rows, [notEmpty], 'and')
+
+    expect(firstFiltered).toHaveLength(3)
+    expect(rowMatchesConditions(rows[2], [empty], 'and')).toBe(true)
+    expect(filterRowsByConditions(rows, [empty], 'and').map((row) => row.id)).toEqual([
+      '3',
+    ])
   })
 })

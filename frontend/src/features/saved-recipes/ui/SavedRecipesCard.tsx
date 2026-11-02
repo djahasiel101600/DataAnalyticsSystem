@@ -31,7 +31,7 @@ export function SavedRecipesCard() {
 
   const handleLoad = (name: string) => {
     const data = loadRecipe(name)
-    if (data) setResult(data)
+    if (data) setResult(data, null, { name: `Saved result loaded: ${name}` })
   }
 
   const handleDelete = (name: string) => {

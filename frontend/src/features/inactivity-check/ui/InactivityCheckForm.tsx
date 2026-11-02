@@ -36,7 +36,11 @@ export function InactivityCheckForm() {
         thresholdDays: Number(thresholdDays) || 3,
         referenceDate: ref,
       })
-      setResult({ columns: outCols, rows })
+      setResult(
+        { columns: outCols, rows },
+        null,
+        { name: 'Inactivity check', configKey: 'inactivity' },
+      )
     } finally {
       setRunning(false)
     }

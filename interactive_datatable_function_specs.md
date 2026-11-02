@@ -248,3 +248,32 @@ The following is a conceptual arrangement of controls, not a requirement to repr
 | [x] | 003 | Record C   | Active  | Comment                         |
 +------------------------------------------------------------------+
 ```
+
+## 13. Table-Level Filtering
+
+Ordinary filtering is a Data Table view feature and must not replace or mutate
+the working dataset.
+
+- Filter by one or more columns using the supported comparison conditions.
+- Combine conditions with AND or OR.
+- Edit or remove individual conditions, or clear all conditions.
+- Show the matching row count alongside the underlying working-row count.
+- Apply filtering before sorting and pagination; selection scopes must use the
+  active filtered view except when the user explicitly selects the entire
+  dataset.
+- Recalculate filters from the complete working dataset whenever conditions
+  change, so replacing one condition with another can reveal previously hidden
+  rows.
+
+The separate Filter & Sort operation remains available when a user intends to
+produce a transformed result dataset. It is not the ordinary Data Table view
+filter.
+
+## 14. Operation History
+
+Record successful data operations in execution order with a stable identifier,
+timestamp, configuration snapshot, and result snapshot. A history entry can be
+inspected without changing the current working result. Restoring an entry is a
+separate, explicit action; it must not re-execute the operation. Keep newer
+entries available after restoring an earlier result so users can return to
+later work.

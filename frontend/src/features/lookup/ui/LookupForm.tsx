@@ -276,7 +276,11 @@ export function LookupForm() {
         fallbackSets,
         options,
       );
-      setResult({ columns, rows });
+      setResult(
+        { columns, rows },
+        null,
+        { name: "Lookup", configKey: "lookup" },
+      );
       setDiagnostics(diagnostics);
       setRecordDiagnostics(recordDiagnostics);
       setSummary(summary);

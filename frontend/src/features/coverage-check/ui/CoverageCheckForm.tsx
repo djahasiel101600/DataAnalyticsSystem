@@ -90,7 +90,11 @@ export function CoverageCheckForm() {
         trim,
         addKeyColumn: true,
       })
-      setResult({ columns, rows })
+      setResult(
+        { columns, rows },
+        null,
+        { name: 'Coverage check', configKey: 'coverage' },
+      )
     } finally {
       setRunning(false)
     }

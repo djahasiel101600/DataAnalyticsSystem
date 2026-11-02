@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useSyncExternalStore,
   type Dispatch,
@@ -16,6 +17,8 @@ type OperationConfigStore = {
   reset: (operation: string) => void
   subscribe: (operation: string, listener: () => void) => () => void
   getOperation: (operation: string) => Record<string, unknown>
+  getSnapshot: (operation: string) => Record<string, unknown>
+  registerDefault: (operation: string, key: string, value: unknown) => void
   setValue: (operation: string, key: string, value: unknown | ((previous: unknown) => unknown), fallback: unknown) => void
 }
 
@@ -24,6 +27,7 @@ const OperationConfigContext = createContext<OperationConfigStore | null>(null)
 
 function createOperationConfigStore(): OperationConfigStore {
   let configurations: OperationConfigurations = {}
+  const defaults: OperationConfigurations = {}
   const listeners = new Map<string, Set<() => void>>()
 
   const notify = (operation: string) => {
@@ -58,6 +62,15 @@ function createOperationConfigStore(): OperationConfigStore {
       }
     },
     getOperation: (operation) => configurations[operation] ?? EMPTY_CONFIG,
+    getSnapshot: (operation) => ({
+      ...defaults[operation],
+      ...configurations[operation],
+    }),
+    registerDefault: (operation, key, value) => {
+      const current = defaults[operation] ?? EMPTY_CONFIG
+      if (key in current) return
+      defaults[operation] = { ...current, [key]: value }
+    },
     setValue: (operation, key, value, fallback) => {
       const current = configurations[operation] ?? EMPTY_CONFIG
       const previous = key in current ? current[key] : fallback
@@ -97,6 +110,9 @@ export function useOperationConfigState<T>(
   initialValue: T,
 ): [T, Dispatch<SetStateAction<T>>] {
   const store = useOperationConfigStore()
+  useEffect(() => {
+    store.registerDefault(operation, key, initialValue)
+  }, [initialValue, key, operation, store])
   const operationConfig = useSyncExternalStore(
     (listener) => store.subscribe(operation, listener),
     () => store.getOperation(operation),

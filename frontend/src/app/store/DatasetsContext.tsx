@@ -4,6 +4,14 @@ import {
   createTableWorkspace,
   type TableWorkspace,
 } from './table-workspace'
+import {
+  appendOperationHistory,
+  createOperationHistoryEntry,
+  type OperationHistoryEntry,
+  type OperationMetadata,
+  type OperationResult,
+} from './operation-history'
+import { useOperationConfigurations } from './OperationConfigContext'
 
 export interface ResultHighlight {
   pattern: string
@@ -14,9 +22,11 @@ const MAX_UNDO = 20
 
 interface DatasetsState {
   datasets: Dataset[]
-  result: { columns: string[]; rows: DataRow[] } | null
+  result: OperationResult | null
   resultHighlight: ResultHighlight | null
-  resultHistory: { columns: string[]; rows: DataRow[] }[]
+  resultHistory: { result: OperationResult; operationId: string | null }[]
+  operationHistory: OperationHistoryEntry[]
+  currentOperationId: string | null
   tableWorkspaces: Record<string, TableWorkspace>
 }
 
@@ -24,11 +34,16 @@ interface DatasetsContextValue extends DatasetsState {
   addDataset: (name: string, columns: string[], rows: DataRow[]) => Dataset
   removeDataset: (id: string) => void
   renameDataset: (id: string, name: string) => void
-  setResult: (data: { columns: string[]; rows: DataRow[] } | null, highlight?: ResultHighlight | null) => void
+  setResult: (
+    data: OperationResult | null,
+    highlight?: ResultHighlight | null,
+    operation?: OperationMetadata,
+  ) => void
+  restoreOperation: (id: string) => void
   getDataset: (id: string) => Dataset | undefined
   undo: () => void
   canUndo: boolean
-  loadSession: (datasets: Dataset[], result: { columns: string[]; rows: DataRow[] } | null) => void
+  loadSession: (datasets: Dataset[], result: OperationResult | null) => void
   ensureTableWorkspace: (key: string, rows: DataRow[]) => void
   updateTableWorkspace: (
     key: string,
@@ -45,11 +60,14 @@ function generateId() {
 }
 
 export function DatasetsProvider({ children }: { children: React.ReactNode }) {
+  const operationConfigs = useOperationConfigurations()
   const [state, setState] = useState<DatasetsState>({
     datasets: [],
     result: null,
     resultHighlight: null,
     resultHistory: [],
+    operationHistory: [],
+    currentOperationId: null,
     tableWorkspaces: {},
   })
 
@@ -80,9 +98,18 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
   const addDataset = useCallback((name: string, columns: string[], rows: DataRow[]): Dataset => {
     const id = generateId()
     const dataset: Dataset = { id, name, columns, rows }
+    const operation = createOperationHistoryEntry(
+      { columns, rows },
+      {
+        name: `Dataset uploaded: ${name}`,
+        config: { datasetId: id, datasetName: name },
+        datasetId: id,
+      },
+    )
     setState((s) => ({
       ...s,
       datasets: [...s.datasets, dataset],
+      operationHistory: appendOperationHistory(s.operationHistory, operation),
     }))
     return dataset
   }, [])
@@ -105,16 +132,65 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
     }))
   }, [])
 
-  const setResult = useCallback((data: { columns: string[]; rows: DataRow[] } | null, highlight?: ResultHighlight | null) => {
+  const setResult = useCallback((
+    data: OperationResult | null,
+    highlight?: ResultHighlight | null,
+    metadata?: OperationMetadata,
+  ) => {
+    const operation = data
+      ? createOperationHistoryEntry(
+          data,
+          metadata
+            ? {
+                ...metadata,
+                config:
+                  metadata.config ??
+                  (metadata.configKey
+                    ? operationConfigs.getSnapshot(metadata.configKey)
+                    : undefined),
+              }
+            : { name: 'Result loaded' },
+        )
+      : null
     setState((s) => {
       const nextHistory = s.result && data
-        ? [...s.resultHistory.slice(-(MAX_UNDO - 1)), s.result]
+        ? [...s.resultHistory.slice(-(MAX_UNDO - 1)), {
+            result: s.result,
+            operationId: s.currentOperationId,
+          }]
         : s.resultHistory
       return {
         ...s,
         result: data,
         resultHighlight: data === null ? null : (highlight !== undefined ? highlight : null),
         resultHistory: data ? nextHistory : s.resultHistory,
+        operationHistory: operation
+          ? appendOperationHistory(s.operationHistory, operation)
+          : s.operationHistory,
+        currentOperationId: operation?.id ?? null,
+      }
+    })
+  }, [operationConfigs])
+
+  const restoreOperation = useCallback((id: string) => {
+    setState((s) => {
+      const entry = s.operationHistory.find((item) => item.id === id)
+      if (!entry) return s
+      const nextHistory = s.result
+        ? [...s.resultHistory.slice(-(MAX_UNDO - 1)), {
+            result: s.result,
+            operationId: s.currentOperationId,
+          }]
+        : s.resultHistory
+      return {
+        ...s,
+        result: entry.result,
+        resultHighlight: null,
+        resultHistory: nextHistory,
+        currentOperationId: entry.id,
+        tableWorkspaces: Object.fromEntries(
+          Object.entries(s.tableWorkspaces).filter(([key]) => key !== 'result'),
+        ),
       }
     })
   }, [])
@@ -125,9 +201,10 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
       const prev = s.resultHistory[s.resultHistory.length - 1]
       return {
         ...s,
-        result: prev,
+        result: prev.result,
         resultHighlight: null,
         resultHistory: s.resultHistory.slice(0, -1),
+        currentOperationId: prev.operationId,
       }
     })
   }, [])
@@ -170,12 +247,14 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
     [],
   )
 
-  const loadSession = useCallback((datasets: Dataset[], result: { columns: string[]; rows: DataRow[] } | null) => {
+  const loadSession = useCallback((datasets: Dataset[], result: OperationResult | null) => {
     setState({
       datasets,
       result,
       resultHighlight: null,
       resultHistory: [],
+      operationHistory: [],
+      currentOperationId: null,
       tableWorkspaces: {},
     })
   }, [])
@@ -191,6 +270,7 @@ export function DatasetsProvider({ children }: { children: React.ReactNode }) {
     removeDataset,
     renameDataset,
     setResult,
+    restoreOperation,
     getDataset,
     undo,
     canUndo,

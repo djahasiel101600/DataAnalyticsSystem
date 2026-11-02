@@ -42,7 +42,11 @@ export function CompareDatasetsForm() {
         ignoreCase,
         trim,
       })
-      setResult({ columns: outCols, rows })
+      setResult(
+        { columns: outCols, rows },
+        null,
+        { name: 'Compare datasets', configKey: 'compare' },
+      )
       console.log('Compare summary:', summary)
     } finally {
       setRunning(false)

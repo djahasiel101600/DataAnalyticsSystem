@@ -51,7 +51,11 @@ export function MergeJoinForm() {
         joinType,
         { strict: true }
       )
-      setResult({ columns, rows })
+      setResult(
+        { columns, rows },
+        null,
+        { name: 'Merge / join', configKey: 'merge' },
+      )
       if (diagnostics.length > 0) setDiag(diagnostics.join(' ; '))
     } finally {
       setRunning(false)

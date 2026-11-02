@@ -78,7 +78,11 @@ export function FilterSortForm() {
         : rows
       const validSorts = sortSpecs.filter((s) => s.column)
       if (validSorts.length > 0) out = sortRowsMulti(out, validSorts)
-      setResult({ columns, rows: out })
+      setResult(
+        { columns, rows: out },
+        null,
+        { name: 'Filter & sort', configKey: 'filter' },
+      )
     } finally {
       setRunning(false)
     }

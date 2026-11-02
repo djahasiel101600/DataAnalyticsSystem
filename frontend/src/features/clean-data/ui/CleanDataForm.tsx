@@ -75,7 +75,11 @@ export function CleanDataForm() {
         fillEmpty: fillEmpty.trim() || undefined,
         standardizeRules,
       })
-      setResult({ columns: outCols, rows })
+      setResult(
+        { columns: outCols, rows },
+        null,
+        { name: 'Clean data', configKey: 'clean' },
+      )
     } finally {
       setRunning(false)
     }

@@ -63,7 +63,11 @@ export function ExceptionReportForm() {
         opts.masterKeyColumns = masterKeyColumns
       }
       const { columns, rows } = runExceptionReport(primary, opts)
-      setResult({ columns, rows })
+      setResult(
+        { columns, rows },
+        null,
+        { name: 'Exception report', configKey: 'exceptions' },
+      )
     } finally {
       setRunning(false)
     }

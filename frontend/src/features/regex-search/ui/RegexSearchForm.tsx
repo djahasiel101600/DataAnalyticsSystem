@@ -79,7 +79,8 @@ export function RegexSearchForm() {
       const { columns, rows } = runRegexSearch(dsList, columnsByDs, regex, searchAll)
       setResult(
         { columns, rows },
-        { pattern: regex, matchColumnHeader: '_matched_column' }
+        { pattern: regex, matchColumnHeader: '_matched_column' },
+        { name: 'Regex search', configKey: 'regex' },
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed')

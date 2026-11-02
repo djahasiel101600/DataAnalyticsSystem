@@ -67,7 +67,11 @@ export function DuplicateCheckForm() {
       const effectiveKeep: DuplicateCheckKeep =
         keepStrategy === 'last' ? 'last' : 'first'
       const { columns: outCols, rows } = runDuplicateCheck(dataset, keyColumns, mode, effectiveKeep, opts)
-      setResult({ columns: outCols, rows })
+      setResult(
+        { columns: outCols, rows },
+        null,
+        { name: 'Duplicates', configKey: 'duplicate' },
+      )
     } finally {
       setRunning(false)
     }
